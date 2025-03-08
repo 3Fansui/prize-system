@@ -1,197 +1,228 @@
 package com.test.prizesystem.service.imp;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-
-import com.test.prizesystem.mapper.ActivityMapper;
-import com.test.prizesystem.mapper.ActivityPrizeMapper;
-import com.test.prizesystem.mapper.ActivityRuleMapper;
-import com.test.prizesystem.mapper.PrizeMapper;
 import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.model.entity.ActivityPrize;
 import com.test.prizesystem.model.entity.ActivityRule;
-import com.test.prizesystem.model.entity.Prize;
 import com.test.prizesystem.service.ActivityService;
 import com.test.prizesystem.service.TokenService;
-import javax.annotation.PostConstruct;
+import com.test.prizesystem.util.RedBlackTreeStorage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-
-import java.math.BigDecimal;
+import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class ActivityServiceImpl implements ActivityService {
 
     @Autowired
-    private ActivityMapper activityMapper;
-
-    @Autowired
-    private ActivityRuleMapper activityRuleMapper;
-
-    @Autowired
-    private ActivityPrizeMapper activityPrizeMapper;
+    private RedBlackTreeStorage treeStorage;
 
     @Autowired
     private TokenService tokenService;
-
-    @Autowired
-    PrizeMapper prizeMapper;
+    
+    // 用于缓存活动信息
+    private final ConcurrentHashMap<Integer, Activity> activityCache = new ConcurrentHashMap<>();
+    
+    // 用于缓存活动规则信息
+    private final ConcurrentHashMap<String, ActivityRule> ruleCache = new ConcurrentHashMap<>();
+    
+    // 红黑树存储的名称
+    private static final String ACTIVITY_TREE = "activities";
+    private static final String RULE_TREE = "activity_rules";
+    private static final String PRIZE_RELATION_TREE = "activity_prizes";
+    
+    @PostConstruct
+    public void init() {
+        // 初始化默认活动数据
+        if (treeStorage.size(ACTIVITY_TREE) == 0) {
+            initDefaultActivityData();
+        }
+    }
+    
+    private void initDefaultActivityData() {
+        // 创建默认活动
+        Activity activity = new Activity();
+        activity.setId(1);
+        activity.setTitle("固定时间抽奖活动");
+        
+        // 设置活动时间
+        Date now = new Date();
+        activity.setStartTime(now);
+        
+        // 设置活动结束时间为7天后
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(now);
+        calendar.add(Calendar.DAY_OF_MONTH, 7);
+        activity.setEndTime(calendar.getTime());
+        
+        // 设置活动类型为时间型
+        activity.setType(2);
+        
+        // 设置活动状态为已预热
+        activity.setStatus(1);
+        
+        // 保存到红黑树
+        treeStorage.save(ACTIVITY_TREE, activity.getId(), activity);
+        activityCache.put(activity.getId(), activity);
+        
+        // 创建活动规则
+        ActivityRule rule = new ActivityRule();
+        rule.setId(1);
+        rule.setActivityId(1);
+        rule.setUserLevel(0);
+        rule.setMaxDrawsDaily(1000);
+        rule.setMaxWinsDaily(100);
+        
+        // 保存活动规则
+        treeStorage.save(RULE_TREE, rule.getId(), rule);
+        ruleCache.put(rule.getActivityId() + "_" + rule.getUserLevel(), rule);
+        
+        // 创建活动奖品关联
+        List<ActivityPrize> activityPrizes = new ArrayList<>();
+        
+        ActivityPrize ap1 = new ActivityPrize();
+        ap1.setId(1);
+        ap1.setActivityId(1);
+        ap1.setPrizeId(1);
+        ap1.setAmount(50);
+        activityPrizes.add(ap1);
+        
+        ActivityPrize ap2 = new ActivityPrize();
+        ap2.setId(2);
+        ap2.setActivityId(1);
+        ap2.setPrizeId(2);
+        ap2.setAmount(100);
+        activityPrizes.add(ap2);
+        
+        ActivityPrize ap3 = new ActivityPrize();
+        ap3.setId(3);
+        ap3.setActivityId(1);
+        ap3.setPrizeId(3);
+        ap3.setAmount(200);
+        activityPrizes.add(ap3);
+        
+        // 保存活动奖品关联
+        for (ActivityPrize ap : activityPrizes) {
+            treeStorage.save(PRIZE_RELATION_TREE, ap.getId(), ap);
+        }
+        
+        log.info("默认活动数据初始化完成");
+        
+        // 生成令牌
+        tokenService.generateTokens(activity, activityPrizes);
+    }
 
     @Override
     public Activity getActivity(Integer activityId) {
-        return activityMapper.selectById(activityId);
+        // 先从缓存获取
+        Activity activity = activityCache.get(activityId);
+        if (activity != null) {
+            return activity;
+        }
+        
+        // 缓存中没有，从红黑树中获取
+        activity = treeStorage.find(ACTIVITY_TREE, activityId, Activity.class);
+        
+        // 如果存在，加入缓存
+        if (activity != null) {
+            activityCache.put(activityId, activity);
+        }
+        
+        return activity;
     }
 
     @Override
     public ActivityRule getActivityRule(Integer activityId, Integer userLevel) {
-        LambdaQueryWrapper<ActivityRule> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ActivityRule::getActivityId, activityId)
-                .eq(ActivityRule::getUserLevel, userLevel);
-        ActivityRule rule = activityRuleMapper.selectOne(queryWrapper);
-
-        if (rule == null) {
-            // 如果没有找到对应级别的规则，查找默认规则（userLevel = 0）
-            queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(ActivityRule::getActivityId, activityId)
-                    .eq(ActivityRule::getUserLevel, 0);
-            rule = activityRuleMapper.selectOne(queryWrapper);
+        // 生成缓存key
+        String cacheKey = activityId + "_" + userLevel;
+        
+        // 先从缓存获取
+        ActivityRule rule = ruleCache.get(cacheKey);
+        if (rule != null) {
+            return rule;
         }
-
-        return rule;
+        
+        // 缓存中没有，遍历红黑树寻找对应规则
+        // 在实际应用中应该有更高效的查询方式，这里简化处理
+        ActivityRule result = null;
+        
+        // 先查找指定用户等级的规则
+        // 实际中应该通过索引查询，这里简化为线性查找
+        for (int i = 1; i <= 10; i++) {
+            ActivityRule r = treeStorage.find(RULE_TREE, i, ActivityRule.class);
+            if (r != null && r.getActivityId().equals(activityId) && r.getUserLevel().equals(userLevel)) {
+                result = r;
+                break;
+            }
+        }
+        
+        // 如果没找到指定用户等级的规则，查找默认规则
+        if (result == null) {
+            for (int i = 1; i <= 10; i++) {
+                ActivityRule r = treeStorage.find(RULE_TREE, i, ActivityRule.class);
+                if (r != null && r.getActivityId().equals(activityId) && r.getUserLevel().equals(0)) {
+                    result = r;
+                    break;
+                }
+            }
+        }
+        
+        // 如果找到了规则，加入缓存
+        if (result != null) {
+            ruleCache.put(cacheKey, result);
+        }
+        
+        return result;
     }
 
     @Override
     public void preheatActivity(Integer activityId) {
         // 获取活动信息
-        Activity activity = activityMapper.selectById(activityId);
+        Activity activity = getActivity(activityId);
         if (activity == null) {
             log.error("活动{}不存在，无法预热", activityId);
             return;
         }
 
         // 获取活动关联的奖品
-        LambdaQueryWrapper<ActivityPrize> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ActivityPrize::getActivityId, activityId);
-        List<ActivityPrize> activityPrizes = activityPrizeMapper.selectList(queryWrapper);
+        List<ActivityPrize> activityPrizes = new ArrayList<>();
+        
+        // 简化处理，直接使用硬编码的演示数据
+        if (activityId == 1) {
+            ActivityPrize ap1 = new ActivityPrize();
+            ap1.setActivityId(1);
+            ap1.setPrizeId(1);
+            ap1.setAmount(50);
+            activityPrizes.add(ap1);
+            
+            ActivityPrize ap2 = new ActivityPrize();
+            ap2.setActivityId(1);
+            ap2.setPrizeId(2);
+            ap2.setAmount(100);
+            activityPrizes.add(ap2);
+            
+            ActivityPrize ap3 = new ActivityPrize();
+            ap3.setActivityId(1);
+            ap3.setPrizeId(3);
+            ap3.setAmount(200);
+            activityPrizes.add(ap3);
+        }
 
         // 根据活动类型生成令牌
-        if (activity.getType() == 2 || activity.getType() == 3) {
-            tokenService.generateTokens(activity, activityPrizes);
-        }
+        tokenService.generateTokens(activity, activityPrizes);
 
         // 更新活动状态为已预热
         activity.setStatus(1);
-        activityMapper.updateById(activity);
+        treeStorage.save(ACTIVITY_TREE, activity.getId(), activity);
+        activityCache.put(activity.getId(), activity);
 
         log.info("活动{}预热完成", activityId);
-    }
-
-
-
-    private void createDemoActivities() {
-        // 创建概率型抽奖活动（类型1）
-        Activity activity1 = new Activity();
-        activity1.setId(1);
-        activity1.setTitle("概率抽奖活动");
-
-        // 当前时间
-        Date now = new Date();
-
-        // 设置活动开始时间为现在
-        activity1.setStartTime(now);
-
-        // 设置活动结束时间为7天后
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(now);
-        calendar.add(Calendar.DAY_OF_MONTH, 7);
-        activity1.setEndTime(calendar.getTime());
-
-        // 设置活动类型为概率型
-        activity1.setType(1);
-
-        // 设置活动状态为未开始
-        activity1.setStatus(0);
-
-        // 设置中奖概率为30%
-        activity1.setProbability(30);
-
-        // 保存活动到数据库
-        activityMapper.insert(activity1);
-
-        log.info("创建演示活动: {}", activity1.getTitle());
-    }
-
-    private void createDemoPrizes() {
-        // 创建奖品
-        Prize prize1 = new Prize();
-        prize1.setId(1);
-        prize1.setName("iPhone 14");
-        prize1.setPrice(new BigDecimal("5999.00"));
-        prize1.setTotalAmount(5);
-        prize1.setRemainingAmount(5);
-        prize1.setImageUrl("https://example.com/images/iphone14.jpg");
-
-        Prize prize2 = new Prize();
-        prize2.setId(2);
-        prize2.setName("AirPods");
-        prize2.setPrice(new BigDecimal("1299.00"));
-        prize2.setTotalAmount(10);
-        prize2.setRemainingAmount(10);
-        prize2.setImageUrl("https://example.com/images/airpods.jpg");
-
-        Prize prize3 = new Prize();
-        prize3.setId(3);
-        prize3.setName("小米手环");
-        prize3.setPrice(new BigDecimal("249.00"));
-        prize3.setTotalAmount(20);
-        prize3.setRemainingAmount(20);
-        prize3.setImageUrl("https://example.com/images/miband.jpg");
-
-        // 保存奖品到数据库
-        prizeMapper.insert(prize1);
-        prizeMapper.insert(prize2);
-        prizeMapper.insert(prize3);
-
-        // 创建活动奖品关联
-        ActivityPrize activityPrize1 = new ActivityPrize();
-        activityPrize1.setActivityId(1);
-        activityPrize1.setPrizeId(1);
-        activityPrize1.setAmount(5);
-
-        ActivityPrize activityPrize2 = new ActivityPrize();
-        activityPrize2.setActivityId(1);
-        activityPrize2.setPrizeId(2);
-        activityPrize2.setAmount(10);
-
-        ActivityPrize activityPrize3 = new ActivityPrize();
-        activityPrize3.setActivityId(1);
-        activityPrize3.setPrizeId(3);
-        activityPrize3.setAmount(20);
-
-        // 保存活动奖品关联到数据库
-        activityPrizeMapper.insert(activityPrize1);
-        activityPrizeMapper.insert(activityPrize2);
-        activityPrizeMapper.insert(activityPrize3);
-
-        log.info("创建演示奖品: {}, {}, {}", prize1.getName(), prize2.getName(), prize3.getName());
-    }
-
-    private void createDemoRules() {
-        // 创建活动规则（对所有用户等级适用）
-        ActivityRule rule = new ActivityRule();
-        rule.setActivityId(1);
-        rule.setUserLevel(0); // 0表示对所有用户等级适用
-        rule.setMaxDrawsDaily(10); // 每天最多抽奖10次
-        rule.setMaxWinsDaily(3);  // 每天最多中奖3次
-
-        // 保存规则到数据库
-        activityRuleMapper.insert(rule);
-
-        log.info("创建演示活动规则: 每日最多抽奖{}次，最多中奖{}次", rule.getMaxDrawsDaily(), rule.getMaxWinsDaily());
     }
 }

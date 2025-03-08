@@ -6,6 +6,19 @@ import static com.test.prizesystem.util.RedBlackTree.Color.RED;
 
 /**
  * <h3>红黑树</h3>
+ * <p>
+ * 红黑树实现，用于高效存储和检索数据。该实现支持以下特性：
+ * <ul>
+ *   <li>添加、删除和查找操作</li>
+ *   <li>基于时间戳的查询</li>
+ *   <li>自动平衡以保持O(log n)性能</li>
+ * </ul>
+ * <p>
+ * 此数据结构主要用于系统中需要高效索引的场景，比如令牌管理。
+ * 红黑树保证了在最坏情况下也能提供对数级别的性能。
+ * 
+ * @author MCP生成
+ * @version 1.0
  */
 public class RedBlackTree {
 
@@ -221,7 +234,7 @@ public class RedBlackTree {
      *
      * @param key 键
      */
-    public void remove(int key) {
+    public void remove(long key) {
         Node deleted = find(key);
         if (deleted == null) {
             return;
@@ -422,6 +435,14 @@ public class RedBlackTree {
         }
 
         return current.value;
+    }
+    
+    /**
+     * 根据key获取值
+     */
+    public Object get(long key) {
+        Node node = find(key);
+        return node != null ? node.value : null;
     }
 
     /**

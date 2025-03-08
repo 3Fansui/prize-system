@@ -1,7 +1,5 @@
 package com.test.prizesystem.service;
 
-
-
 import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.model.entity.ActivityPrize;
 import com.test.prizesystem.model.entity.Token;
@@ -22,11 +20,6 @@ public interface TokenService {
     Token getAvailableToken(Integer activityId, long timestamp);
 
     /**
-     * 获取下一个令牌（先到先得）
-     */
-    Token getNextToken(Integer activityId);
-
-    /**
      * 使用令牌
      */
     boolean useToken(Long tokenId);
@@ -35,6 +28,4 @@ public interface TokenService {
      * 获取活动的缓存令牌详细信息
      */
     Map<String, Object> getTokenDetails(Integer activityId);
-
-
 }

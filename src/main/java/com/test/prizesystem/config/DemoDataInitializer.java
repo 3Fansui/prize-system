@@ -1,26 +1,22 @@
 package com.test.prizesystem.config;
 
-
-import com.test.prizesystem.mapper.ActivityMapper;
-import com.test.prizesystem.mapper.ActivityPrizeMapper;
-import com.test.prizesystem.mapper.ActivityRuleMapper;
-import com.test.prizesystem.mapper.PrizeMapper;
 import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.model.entity.ActivityPrize;
 import com.test.prizesystem.model.entity.ActivityRule;
 import com.test.prizesystem.model.entity.Prize;
 import com.test.prizesystem.service.ActivityService;
+import com.test.prizesystem.util.RedBlackTreeStorage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -29,37 +25,21 @@ public class DemoDataInitializer implements CommandLineRunner {
     @Value("${prize.init-demo-data:true}")
     private boolean initDemoData;
 
-    @Value("${prize.clear-database:false}")
-    private boolean clearDatabase;
-
-    @Autowired
-    private ActivityMapper activityMapper;
-
-    @Autowired
-    private ActivityRuleMapper activityRuleMapper;
-
-    @Autowired
-    private ActivityPrizeMapper activityPrizeMapper;
-
-    @Autowired
-    private PrizeMapper prizeMapper;
-
     @Autowired
     private ActivityService activityService;
-
+    
+    @Autowired
+    private RedBlackTreeStorage treeStorage;
 
     @Override
-    @Transactional
     public void run(String... args) {
         if (!initDemoData) {
             log.info("演示数据初始化已禁用，跳过初始化");
             return;
         }
 
-
-
-        // 检查活动表是否有数据
-        if (activityMapper.selectCount(null) > 0) {
+        // 检查活动树是否已有数据
+        if (treeStorage.size("activities") > 0) {
             log.info("已存在演示数据，跳过初始化");
             return;
         }
@@ -67,121 +47,142 @@ public class DemoDataInitializer implements CommandLineRunner {
         log.info("开始初始化演示数据");
 
         // 创建演示活动
-        createDemoActivities();
-
-        // 创建演示奖品和活动关联
-        createDemoPrizes();
-
+        Activity activity = createDemoActivity();
+        
+        // 创建演示奖品
+        List<Prize> prizes = createDemoPrizes();
+        
+        // 创建活动奖品关联
+        List<ActivityPrize> activityPrizes = createActivityPrizes(activity, prizes);
+        
         // 创建活动规则
-        createDemoRules();
+        createDemoRule(activity);
 
         // 预热活动
-        //activityService.preheatActivity(1);
+        activityService.preheatActivity(activity.getId());
 
         log.info("演示数据初始化完成");
     }
 
-
-    private void createDemoActivities() {
-        // 创建概率型抽奖活动（类型1）
-        Activity activity1 = new Activity();
-        activity1.setId(1);
-        activity1.setTitle("概率抽奖活动");
+    private Activity createDemoActivity() {
+        // 创建固定时间型抽奖活动（类型2）
+        Activity activity = new Activity();
+        activity.setId(1);
+        activity.setTitle("固定时间抽奖活动");
 
         // 当前时间
         Date now = new Date();
 
-        // 设置活动开始时间为现在后3分钟
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(now);
-        calendar.add(Calendar.MINUTE, 3); // 3分钟后开始
-        activity1.setStartTime(calendar.getTime());
+        // 设置活动开始时间为现在
+        activity.setStartTime(now);
 
         // 设置活动结束时间为开始时间后7天
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(now);
         calendar.add(Calendar.DAY_OF_MONTH, 7);
-        activity1.setEndTime(calendar.getTime());
+        activity.setEndTime(calendar.getTime());
 
-        // 设置活动类型为概率型
-        activity1.setType(1);
+        // 设置活动类型为固定时间型
+        activity.setType(2);
 
         // 设置活动状态为未开始
-        activity1.setStatus(0); // 设为0表示未开始，等待预热
+        activity.setStatus(0);
 
-        // 设置中奖概率为50%(提高概率以便测试)
-        activity1.setProbability(50);
+        // 保存活动到红黑树
+        treeStorage.save("activities", activity.getId(), activity);
 
-        // 保存活动到数据库
-        activityMapper.insert(activity1);
-
-        log.info("创建演示活动: {}, 开始时间: {}", activity1.getTitle(), activity1.getStartTime());
+        log.info("创建演示活动: {}, 开始时间: {}", activity.getTitle(), activity.getStartTime());
+        
+        return activity;
     }
 
-    private void createDemoPrizes() {
+    private List<Prize> createDemoPrizes() {
+        List<Prize> prizes = new ArrayList<>();
+        
         // 创建奖品，增加数量以便于压测
         Prize prize1 = new Prize();
         prize1.setId(1);
         prize1.setName("iPhone 14");
         prize1.setPrice(new BigDecimal("5999.00"));
-        prize1.setTotalAmount(50);  // 增加数量
+        prize1.setTotalAmount(50);
         prize1.setRemainingAmount(50);
         prize1.setImageUrl("https://example.com/images/iphone14.jpg");
+        prizes.add(prize1);
 
         Prize prize2 = new Prize();
         prize2.setId(2);
         prize2.setName("AirPods");
         prize2.setPrice(new BigDecimal("1299.00"));
-        prize2.setTotalAmount(100); // 增加数量
+        prize2.setTotalAmount(100);
         prize2.setRemainingAmount(100);
         prize2.setImageUrl("https://example.com/images/airpods.jpg");
+        prizes.add(prize2);
 
         Prize prize3 = new Prize();
         prize3.setId(3);
         prize3.setName("小米手环");
         prize3.setPrice(new BigDecimal("249.00"));
-        prize3.setTotalAmount(200); // 增加数量
+        prize3.setTotalAmount(200);
         prize3.setRemainingAmount(200);
         prize3.setImageUrl("https://example.com/images/miband.jpg");
+        prizes.add(prize3);
 
-        // 保存奖品到数据库
-        prizeMapper.insert(prize1);
-        prizeMapper.insert(prize2);
-        prizeMapper.insert(prize3);
+        // 保存奖品到红黑树
+        for (Prize prize : prizes) {
+            treeStorage.save("prizes", prize.getId(), prize);
+        }
 
-        // 创建活动奖品关联
-        ActivityPrize activityPrize1 = new ActivityPrize();
-        activityPrize1.setActivityId(1);
-        activityPrize1.setPrizeId(1);
-        activityPrize1.setAmount(50);
+        log.info("创建演示奖品: {}, {}, {}", 
+                prize1.getName(), prize2.getName(), prize3.getName());
+        
+        return prizes;
+    }
+    
+    private List<ActivityPrize> createActivityPrizes(Activity activity, List<Prize> prizes) {
+        List<ActivityPrize> activityPrizes = new ArrayList<>();
+        
+        ActivityPrize ap1 = new ActivityPrize();
+        ap1.setId(1);
+        ap1.setActivityId(activity.getId());
+        ap1.setPrizeId(prizes.get(0).getId());
+        ap1.setAmount(50);
+        activityPrizes.add(ap1);
 
-        ActivityPrize activityPrize2 = new ActivityPrize();
-        activityPrize2.setActivityId(1);
-        activityPrize2.setPrizeId(2);
-        activityPrize2.setAmount(100);
+        ActivityPrize ap2 = new ActivityPrize();
+        ap2.setId(2);
+        ap2.setActivityId(activity.getId());
+        ap2.setPrizeId(prizes.get(1).getId());
+        ap2.setAmount(100);
+        activityPrizes.add(ap2);
 
-        ActivityPrize activityPrize3 = new ActivityPrize();
-        activityPrize3.setActivityId(1);
-        activityPrize3.setPrizeId(3);
-        activityPrize3.setAmount(200);
+        ActivityPrize ap3 = new ActivityPrize();
+        ap3.setId(3);
+        ap3.setActivityId(activity.getId());
+        ap3.setPrizeId(prizes.get(2).getId());
+        ap3.setAmount(200);
+        activityPrizes.add(ap3);
 
-        // 保存活动奖品关联到数据库
-        activityPrizeMapper.insert(activityPrize1);
-        activityPrizeMapper.insert(activityPrize2);
-        activityPrizeMapper.insert(activityPrize3);
-
-        log.info("创建演示奖品: {}, {}, {}", prize1.getName(), prize2.getName(), prize3.getName());
+        // 保存活动奖品关联到红黑树
+        for (ActivityPrize ap : activityPrizes) {
+            treeStorage.save("activity_prizes", ap.getId(), ap);
+        }
+        
+        return activityPrizes;
     }
 
-    private void createDemoRules() {
+    private void createDemoRule(Activity activity) {
         // 创建活动规则
         ActivityRule rule = new ActivityRule();
-        rule.setActivityId(1);
+        rule.setId(1);
+        rule.setActivityId(activity.getId());
         rule.setUserLevel(0); // 0表示对所有用户等级适用
         rule.setMaxDrawsDaily(1000); // 增加次数上限以便于压测
         rule.setMaxWinsDaily(100);  // 增加中奖次数上限
 
-        // 保存规则到数据库
-        activityRuleMapper.insert(rule);
+        // 保存规则到红黑树
+        treeStorage.save("activity_rules", rule.getId(), rule);
 
-        log.info("创建演示活动规则: 每日最多抽奖{}次，最多中奖{}次", rule.getMaxDrawsDaily(), rule.getMaxWinsDaily());
+        log.info("创建演示活动规则: 每日最多抽奖{}次，最多中奖{}次", 
+                rule.getMaxDrawsDaily(), rule.getMaxWinsDaily());
     }
 }

@@ -1,20 +1,34 @@
 package com.test.prizesystem.model.entity;
 
-
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-
 import java.util.Date;
 
+/**
+ * 活动奖品关联实体类
+ * <p>
+ * 表示活动与奖品的关系，定义了活动中特定奖品的数量。
+ * 一个活动可以有多个奖品，一个奖品也可以参与多个活动。
+ * 
+ * @author MCP生成
+ * @version 1.0
+ */
 @Data
-@TableName("t_activity_prize")
+@ApiModel(value = "活动奖品关联", description = "活动与奖品的关联信息")
 public class ActivityPrize {
-    @TableId(type = IdType.AUTO)
+    @ApiModelProperty(value = "ID", example = "1", position = 1)
     private Integer id;
+    
+    @ApiModelProperty(value = "活动ID", example = "1", position = 2)
     private Integer activityId;
+    
+    @ApiModelProperty(value = "奖品ID", example = "2", position = 3)
     private Integer prizeId;
+    
+    @ApiModelProperty(value = "奖品数量", example = "10", position = 4)
     private Integer amount;
+    
+    @ApiModelProperty(value = "创建时间", position = 5)
     private Date createTime;
 }

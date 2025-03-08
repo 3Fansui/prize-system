@@ -58,25 +58,26 @@
             <version>2.9.2</version>
         </dependency>
 
-        <!-- MySQL驱动 -->
-        <dependency>
+        <!-- MySQL驱动 - 不再需要 -->
+        <!-- <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.28</version>
-        </dependency>
+        </dependency> -->
 
-        <!-- MyBatis Plus -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.2</version>
-        </dependency>
 
-        <!-- Druid连接池 -->
+
+        <!-- JSON处理 -->
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid-spring-boot-starter</artifactId>
-            <version>1.2.23</version>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        
+        <!-- 并发工具 -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>31.1-jre</version>
         </dependency>
 
     </dependencies>
@@ -91,6 +92,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <version>1.18.28</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
