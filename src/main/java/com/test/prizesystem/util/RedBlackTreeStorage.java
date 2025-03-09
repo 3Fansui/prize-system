@@ -26,8 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * </ul>
  * <p>
  * 该存储引擎主要用于系统中需要高性能、内存级别访问速度的数据，特别是抽奖活动中的令牌和奖品数据。
- * 
- * @author MCP生成
+ *
  * @version 1.0
  */
 @Slf4j
@@ -49,7 +48,21 @@ public class RedBlackTreeStorage {
     }
     
     /**
-     * 获取指定名称的TreeData，如果不存在则创建
+     * 使用枚举获取指定名称的TreeData，如果不存在则创建
+     */
+    private TreeData getTreeData(TreeNames treeName) {
+        return treesMap.computeIfAbsent(treeName.getTreeName(), k -> new TreeData());
+    }
+    
+    /**
+     * 使用枚举获取指定名称的红黑树
+     */
+    public RedBlackTree getTree(TreeNames treeName) {
+        return getTreeData(treeName).tree;
+    }
+    
+    /**
+     * 使用字符串名称获取TreeData，如果不存在则创建
      */
     private TreeData getTreeData(String treeName) {
         return treesMap.computeIfAbsent(treeName, k -> new TreeData());
@@ -64,6 +77,27 @@ public class RedBlackTreeStorage {
     
     /**
      * 保存对象到红黑树中（线程安全）
+     * @param treeName 红黑树枚举
+     * @param key 键
+     * @param object 值对象
+     */
+    public <T> void save(TreeNames treeName, long key, T object) {
+        TreeData treeData = getTreeData(treeName);
+        treeData.lock.writeLock().lock();
+        try {
+            String json = objectMapper.writeValueAsString(object);
+            treeData.tree.put(key, json);
+            log.debug("已保存对象到树 {}, key={}", treeName, key);
+        } catch (JsonProcessingException e) {
+            log.error("对象序列化失败", e);
+            throw new RuntimeException("保存对象失败", e);
+        } finally {
+            treeData.lock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * 保存对象到红黑树中（线程安全）- 字符串兼容方法
      * @param treeName 红黑树名称
      * @param key 键
      * @param object 值对象
@@ -85,6 +119,31 @@ public class RedBlackTreeStorage {
     
     /**
      * 根据key查找对象（线程安全）
+     * @param treeName 红黑树枚举
+     * @param key 键
+     * @param clazz 对象类型
+     * @return 找到的对象，如果不存在则返回null
+     */
+    public <T> T find(TreeNames treeName, long key, Class<T> clazz) {
+        TreeData treeData = getTreeData(treeName);
+        treeData.lock.readLock().lock();
+        try {
+            Object value = treeData.tree.get(key);
+            if (value == null) {
+                return null;
+            }
+            
+            return objectMapper.readValue((String) value, clazz);
+        } catch (JsonProcessingException e) {
+            log.error("对象反序列化失败", e);
+            throw new RuntimeException("读取对象失败", e);
+        } finally {
+            treeData.lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * 根据key查找对象（线程安全）- 字符串兼容方法
      * @param treeName 红黑树名称
      * @param key 键
      * @param clazz 对象类型
@@ -111,6 +170,27 @@ public class RedBlackTreeStorage {
     /**
      * 不大于指定key的最大节点（线程安全）
      */
+    public <T> T findBefore(TreeNames treeName, long timestamp, Class<T> clazz) {
+        TreeData treeData = getTreeData(treeName);
+        treeData.lock.readLock().lock();
+        try {
+            Object value = treeData.tree.findTokenBefore(timestamp);
+            if (value == null) {
+                return null;
+            }
+            
+            return objectMapper.readValue((String) value, clazz);
+        } catch (JsonProcessingException e) {
+            log.error("对象反序列化失败", e);
+            throw new RuntimeException("读取对象失败", e);
+        } finally {
+            treeData.lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * 不大于指定key的最大节点（线程安全）- 字符串兼容方法
+     */
     public <T> T findBefore(String treeName, long timestamp, Class<T> clazz) {
         TreeData treeData = getTreeData(treeName);
         treeData.lock.readLock().lock();
@@ -131,6 +211,21 @@ public class RedBlackTreeStorage {
     
     /**
      * 删除对象（线程安全）
+     * @param treeName 红黑树枚举
+     * @param key 键
+     */
+    public void remove(TreeNames treeName, long key) {
+        TreeData treeData = getTreeData(treeName);
+        treeData.lock.writeLock().lock();
+        try {
+            treeData.tree.remove(key);
+        } finally {
+            treeData.lock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * 删除对象（线程安全）- 字符串兼容方法
      * @param treeName 红黑树名称
      * @param key 键
      */
@@ -147,6 +242,19 @@ public class RedBlackTreeStorage {
     /**
      * 获取树中的节点数量（线程安全）
      */
+    public int size(TreeNames treeName) {
+        TreeData treeData = getTreeData(treeName);
+        treeData.lock.readLock().lock();
+        try {
+            return treeData.tree.size();
+        } finally {
+            treeData.lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * 获取树中的节点数量（线程安全）- 字符串兼容方法
+     */
     public int size(String treeName) {
         TreeData treeData = getTreeData(treeName);
         treeData.lock.readLock().lock();
@@ -159,6 +267,13 @@ public class RedBlackTreeStorage {
     
     /**
      * 清空指定的树（线程安全）
+     */
+    public void clear(TreeNames treeName) {
+        treesMap.remove(treeName.getTreeName());
+    }
+    
+    /**
+     * 清空指定的树（线程安全）- 字符串兼容方法
      */
     public void clear(String treeName) {
         treesMap.remove(treeName);
@@ -173,6 +288,28 @@ public class RedBlackTreeStorage {
     
     /**
      * 获取树中数据的样本（用于调试）
+     * @param treeName 树枚举
+     * @param clazz 对象类型
+     * @param limit 最大返回数量
+     * @return 对象列表
+     */
+    public <T> List<T> getSampleData(TreeNames treeName, Class<T> clazz, int limit) {
+        TreeData treeData = getTreeData(treeName);
+        List<T> result = new ArrayList<>();
+        
+        treeData.lock.readLock().lock();
+        try {
+            // 通过递归获取树中的节点
+            collectNodes(treeData.tree.root, result, clazz, limit);
+        } finally {
+            treeData.lock.readLock().unlock();
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 获取树中数据的样本（用于调试）- 字符串兼容方法
      * @param treeName 树名称
      * @param clazz 对象类型
      * @param limit 最大返回数量

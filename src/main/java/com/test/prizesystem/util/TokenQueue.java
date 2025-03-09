@@ -1,40 +1,37 @@
 package com.test.prizesystem.util;
 
+import com.test.prizesystem.model.entity.Prize;
 import com.test.prizesystem.model.entity.Token;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
- * 线程安全的令牌双端队列
+ * 线程安全的活动令牌双端队列管理器
  * <p>
- * 该组件使用Java的ConcurrentLinkedDeque实现，提供高效的令牌管理。
- * 所有令牌存储在该队列中，并按照时间戳排序，保证奖品按照时间顺序发放。
- * 该队列链接了活动预热化与实际抽奖的处理过程，是系统的核心组件之一。
- * <p>
- * 主要功能：
- * <ul>
- *   <li>生成并管理有序的令牌</li>
- *   <li>基于时间戳获取可用的令牌</li>
- *   <li>支持未使用的令牌返回队列</li>
- *   <li>线程安全的队列操作</li>
- * </ul>
+ * 该组件为每个活动维护一个独立的ConcurrentLinkedDeque，提供高效的令牌管理。
+ * 令牌按照时间戳排序存储，保证奖品按照时间顺序发放。
+ * 每个令牌包含奖品ID和名称，简化抽奖过程中的数据访问。
+ * 使用活动ID隔离不同活动的令牌，提高并发性能。
  * 
  * @author MCP生成
- * @version 1.0
+ * @version 4.0
  */
 @Slf4j
 @Component
 public class TokenQueue {
     
-    // 使用ConcurrentLinkedDeque作为线程安全的双端队列
-    private final ConcurrentLinkedDeque<Token> tokenQueue = new ConcurrentLinkedDeque<>();
+    // 使用Map存储每个活动ID对应的令牌队列
+    private final Map<Integer, ConcurrentLinkedDeque<Token>> activityTokenQueues = new ConcurrentHashMap<>();
     
     // 用于生成唯一ID
     private final AtomicLong idGenerator = new AtomicLong(1);
@@ -43,39 +40,53 @@ public class TokenQueue {
     private final Random random = new Random();
     
     /**
-     * 生成令牌并添加到队列
+     * 生成令牌并添加到对应活动的队列
      * @param activityId 活动ID
-     * @param prizeId 奖品ID
-     * @param baseTimestamp 基础时间戳
+     * @param prize 奖品对象
+     * @param baseTimestamp 活动开始时间戳(秒级)
      * @return 生成的令牌
      */
-    public Token generateToken(Integer activityId, Integer prizeId, long baseTimestamp) {
-        // 给时间戳添加随机数，避免重复
-        // 将时间戳乘以1000，再加上3位随机数
-        long uniqueTimestamp = baseTimestamp * 1000 + random.nextInt(1000);
+    public Token generateToken(Integer activityId, Prize prize, long baseTimestamp) {
+        // 确保活动队列存在
+        ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.computeIfAbsent(
+                activityId, k -> new ConcurrentLinkedDeque<>());
+        
+        // 生成随机时间戳 - 根据新规则实现
+        // baseTimestamp是活动开始时间，在活动时间范围内随机分配
+        // 这里假设活动持续时间为endTime - startTime，即endTime传入前已计算好
+        long randomOffset = (long)(Math.random() * 3600); // 假设最长活动时间为1小时
+        long tokenTimestamp = baseTimestamp + randomOffset;
         
         Token token = new Token();
         token.setId(idGenerator.getAndIncrement());
         token.setActivityId(activityId);
-        token.setPrizeId(prizeId);
-        token.setTokenTimestamp(uniqueTimestamp);
-        token.setStatus(0); // 0=未使用
+        token.setPrizeId(prize.getId());
+        token.setPrizeName(prize.getName());
+        token.setTokenTimestamp(tokenTimestamp);
+        token.setCreateTime(new Date());
         
-        // 使用二分查找优化的方式添加令牌
-        addTokenInOrder(token);
+        // 使用二分查找优化的方式添加令牌到对应活动的队列
+        addTokenInOrder(activityId, token);
         
-        log.debug("生成令牌: activityId={}, prizeId={}, timestamp={}", 
-                activityId, prizeId, uniqueTimestamp);
+        if (log.isDebugEnabled()) {
+            log.debug("生成令牌: activityId={}, prizeId={}, prizeName={}, timestamp={}", 
+                    activityId, prize.getId(), prize.getName(), tokenTimestamp);
+        }
         
         return token;
     }
     
     /**
-     * 使用二分查找优化的方式添加令牌
+     * 使用二分查找优化的方式添加令牌到指定活动的队列
      * 注意：由于ConcurrentLinkedDeque不支持随机访问，
      * 这里的优化只是减少了比较次数，但仍然需要O(n)的时间复杂度
+     * 
+     * @param activityId 活动ID
+     * @param token 要添加的令牌
      */
-    private void addTokenInOrder(Token token) {
+    private void addTokenInOrder(Integer activityId, Token token) {
+        ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
+        
         // 如果队列为空，直接添加
         if (tokenQueue.isEmpty()) {
             tokenQueue.add(token);
@@ -86,12 +97,12 @@ public class TokenQueue {
         Token first = tokenQueue.peekFirst();
         Token last = tokenQueue.peekLast();
         
-        if (token.getTokenTimestamp() <= first.getTokenTimestamp()) {
+        if (first != null && token.getTokenTimestamp() <= first.getTokenTimestamp()) {
             tokenQueue.addFirst(token);
             return;
         }
         
-        if (token.getTokenTimestamp() >= last.getTokenTimestamp()) {
+        if (last != null && token.getTokenTimestamp() >= last.getTokenTimestamp()) {
             tokenQueue.addLast(token);
             return;
         }
@@ -109,16 +120,25 @@ public class TokenQueue {
             }
             tokenQueue.add(t);
         }
+        
+        // 如果遍历完列表还没插入，说明应该插在最后
+        if (!inserted) {
+            tokenQueue.add(token);
+        }
     }
     
     /**
-     * 从队列获取可用令牌（时间戳小于等于当前时间）
-     * @param currentTimestamp 当前时间戳
+     * 从指定活动的队列获取可用令牌（时间戳小于等于当前时间）
+     * @param activityId 活动ID
+     * @param currentTimestamp 当前时间戳（秒级）
      * @return 可用的令牌，如果没有则返回null
      */
-    public Token getAvailableToken(long currentTimestamp) {
-        // 将当前时间戳乘以1000以匹配令牌中的时间戳格式
-        long scaledTimestamp = currentTimestamp * 1000;
+    public Token getAvailableToken(Integer activityId, long currentTimestamp) {
+        // 获取活动对应的令牌队列
+        ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
+        if (tokenQueue == null || tokenQueue.isEmpty()) {
+            return null;
+        }
         
         // 从队首开始检查
         Token token = tokenQueue.peekFirst();
@@ -127,7 +147,7 @@ public class TokenQueue {
         }
         
         // 如果队首令牌的时间戳还大于当前时间，说明没有可用令牌
-        if (token.getTokenTimestamp() > scaledTimestamp) {
+        if (token.getTokenTimestamp() > currentTimestamp) {
             return null;
         }
         
@@ -136,50 +156,80 @@ public class TokenQueue {
     }
     
     /**
-     * 将未使用的令牌重新放回队列头部
+     * 将未使用的令牌重新放回对应活动的队列头部
      */
     public void returnToken(Token token) {
-        if (token != null && token.getStatus() == 0) {
-            tokenQueue.addFirst(token);
-            log.debug("令牌已返回队列: id={}, timestamp={}", 
-                    token.getId(), token.getTokenTimestamp());
+        if (token != null) {
+            Integer activityId = token.getActivityId();
+            ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
+            
+            if (tokenQueue != null) {
+                tokenQueue.addFirst(token);
+                if (log.isDebugEnabled()) {
+                    log.debug("令牌已返回队列: activityId={}, id={}, prizeName={}, timestamp={}", 
+                            activityId, token.getId(), token.getPrizeName(), token.getTokenTimestamp());
+                }
+            } else {
+                log.warn("尝试返回令牌到不存在的活动队列: activityId={}", activityId);
+            }
         }
     }
     
     /**
-     * 清空队列
+     * 清空指定活动的令牌队列
+     * @param activityId 活动ID
      */
-    public void clear() {
-        tokenQueue.clear();
-        log.info("令牌队列已清空");
+    public void clear(Integer activityId) {
+        ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
+        if (tokenQueue != null) {
+            tokenQueue.clear();
+            log.info("活动{}的令牌队列已清空", activityId);
+        }
     }
     
     /**
-     * 获取队列大小
+     * 清空所有活动的令牌队列
      */
-    public int size() {
-        return tokenQueue.size();
+    public void clearAll() {
+        activityTokenQueues.clear();
+        log.info("所有活动的令牌队列已清空");
     }
     
     /**
-     * 获取队列中的令牌（用于调试）
+     * 获取指定活动的令牌队列大小
+     * @param activityId 活动ID
+     * @return 队列大小
+     */
+    public int size(Integer activityId) {
+        ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
+        return tokenQueue != null ? tokenQueue.size() : 0;
+    }
+    
+    /**
+     * 获取所有活动的令牌总数
+     * @return 总令牌数
+     */
+    public int totalSize() {
+        return activityTokenQueues.values().stream()
+                .mapToInt(ConcurrentLinkedDeque::size)
+                .sum();
+    }
+    
+    /**
+     * 获取指定活动队列中的令牌（用于调试）
      * 返回一个副本，不影响原队列
+     * @param activityId 活动ID
      * @param limit 最大返回数量
      * @return 令牌列表
      */
-    public List<Token> getTokens(int limit) {
+    public List<Token> getTokens(Integer activityId, int limit) {
+        ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
+        if (tokenQueue == null) {
+            return new ArrayList<>();
+        }
+        
         return tokenQueue.stream()
                 .limit(limit)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 获取队列中所有令牌的时间戳（用于调试）
-     * @return 时间戳列表
-     */
-    public List<Long> getTokenTimestamps() {
-        return tokenQueue.stream()
-                .map(Token::getTokenTimestamp)
                 .collect(Collectors.toList());
     }
 }
