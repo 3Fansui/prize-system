@@ -18,8 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 用户服务实现类
  * <p>
  * 使用红黑树存储用户信息，提供线程安全的用户管理功能。
- * 
- * @author MCP生成
+ *
  * @version 1.0
  */
 @Slf4j
@@ -37,25 +36,41 @@ public class UserServiceImpl implements UserService {
     
     @PostConstruct
     public void init() {
-        // 创建一个默认用户用于测试
+        // 创建固定ID的默认用户用于测试
         if (treeStorage.size(TreeNames.USERS) == 0) {
-            register("test", "test", 100, 10);
-            register("admin", "admin", 1000, 100);
-            log.info("创建默认用户完成");
+            register(1001, "test1", "test", 100, 10);
+            register(1002, "test2", "test", 100, 10);
+            register(1003, "test3", "test", 100, 10);
+            register(1004, "test4", "test", 100, 10);
+            register(1005, "test5", "test", 100, 10);
+            register(1006, "test6", "test", 100, 10);
+            register(1007, "test7", "test", 100, 10);
+            register(1008, "test8", "test", 100, 10);
+            register(1009, "test9", "test", 100, 10);
+            register(1010, "test10", "test", 100, 10);
+            register(9999, "admin", "admin", 1000, 100);
+            log.info("创建固定ID测试用户完成");
         }
     }
 
     @Override
-    public User register(String username, String password, Integer drawQuota, Integer winQuota) {
+    public User register(Integer id, String username, String password, Integer drawQuota, Integer winQuota) {
         // 检查用户名是否已存在
         if (usernameToId.containsKey(username)) {
             log.warn("用户名 {} 已存在", username);
             return null;
         }
         
+        // 检查ID是否已被使用
+        if (id != null && treeStorage.find(TreeNames.USERS, id, User.class) != null) {
+            log.warn("用户ID {} 已存在", id);
+            return null;
+        }
+        
         // 创建新用户
         User user = new User();
-        user.setId(idGenerator.incrementAndGet());
+        // 如果提供了ID，使用提供的ID，否则自动生成
+        user.setId(id != null ? id : idGenerator.incrementAndGet());
         user.setUsername(username);
         user.setPassword(password);
         user.setDrawQuota(drawQuota != null ? drawQuota : 100);  // 默认抽奖配额
@@ -71,6 +86,12 @@ public class UserServiceImpl implements UserService {
         
         log.info("用户注册成功: {}, ID: {}", username, user.getId());
         return user;
+    }
+    
+    @Override
+    public User register(String username, String password, Integer drawQuota, Integer winQuota) {
+        // 调用新的带ID参数的方法，ID参数传null表示自动生成
+        return register(null, username, password, drawQuota, winQuota);
     }
 
     @Override
@@ -111,8 +132,9 @@ public class UserServiceImpl implements UserService {
         
         User user = getUser(userId);
         if (user == null) {
+            // 在用户不存在时，正确记录异常原因但不影响调用方的处理
             log.warn("用户 {} 不存在", userId);
-            return false;
+            throw new IllegalArgumentException("用户不存在");
         }
         
         // 检查是否达到抽奖次数上限
@@ -139,8 +161,9 @@ public class UserServiceImpl implements UserService {
         
         User user = getUser(userId);
         if (user == null) {
+            // 在用户不存在时，正确记录异常原因但不影响调用方的处理
             log.warn("用户 {} 不存在", userId);
-            return false;
+            throw new IllegalArgumentException("用户不存在");
         }
         
         // 检查是否达到中奖次数上限

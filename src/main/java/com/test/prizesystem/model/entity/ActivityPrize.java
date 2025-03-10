@@ -29,6 +29,6 @@ public class ActivityPrize {
     @ApiModelProperty(value = "奖品数量", example = "10", position = 4)
     private Integer amount;
     
-    @ApiModelProperty(value = "创建时间", position = 5)
+    @ApiModelProperty(value = "创建时间", example = "2025-01-01 00:00:00", position = 5)
     private Date createTime;
 }

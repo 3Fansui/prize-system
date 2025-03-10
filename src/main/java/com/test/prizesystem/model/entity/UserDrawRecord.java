@@ -17,7 +17,7 @@ import java.util.Date;
 @Data
 @ApiModel(value = "用户抽奖记录", description = "记录用户参与抽奖的行为")
 public class UserDrawRecord {
-    @ApiModelProperty(value = "ID", example = "1", position = 1)
+    @ApiModelProperty(value = "ID", example = "1000", position = 1)
     private Long id;
     
     @ApiModelProperty(value = "用户ID", example = "10086", position = 2)
@@ -26,6 +26,6 @@ public class UserDrawRecord {
     @ApiModelProperty(value = "活动ID", example = "1", position = 3)
     private Integer activityId;
     
-    @ApiModelProperty(value = "抽奖时间", position = 4)
+    @ApiModelProperty(value = "抽奖时间", example = "2025-01-01 00:00:00", position = 4)
     private Date drawTime;
 }

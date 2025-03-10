@@ -17,7 +17,7 @@ import java.util.Date;
 @Data
 @ApiModel(value = "用户中奖记录", description = "记录用户成功中奖的信息")
 public class UserPrizeRecord {
-    @ApiModelProperty(value = "ID", example = "1", position = 1)
+    @ApiModelProperty(value = "ID", example = "1000", position = 1)
     private Long id;
     
     @ApiModelProperty(value = "用户ID", example = "10086", position = 2)
@@ -29,6 +29,6 @@ public class UserPrizeRecord {
     @ApiModelProperty(value = "奖品ID", example = "2", position = 4)
     private Integer prizeId;
     
-    @ApiModelProperty(value = "中奖时间", position = 5)
+    @ApiModelProperty(value = "中奖时间", example = "2025-01-01 00:00:00", position = 5)
     private Date winTime;
 }

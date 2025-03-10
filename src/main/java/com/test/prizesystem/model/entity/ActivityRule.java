@@ -32,9 +32,9 @@ public class ActivityRule {
     @ApiModelProperty(value = "每日最大中奖次数", example = "2", position = 5)
     private Integer maxWinsDaily;
     
-    @ApiModelProperty(value = "创建时间", position = 6)
+    @ApiModelProperty(value = "创建时间", example = "2025-01-01 00:00:00", position = 6)
     private Date createTime;
     
-    @ApiModelProperty(value = "更新时间", position = 7)
+    @ApiModelProperty(value = "更新时间", example = "2025-01-01 00:00:00", position = 7)
     private Date updateTime;
 }

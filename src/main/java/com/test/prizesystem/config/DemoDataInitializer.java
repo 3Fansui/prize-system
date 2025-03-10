@@ -76,10 +76,10 @@ public class DemoDataInitializer implements CommandLineRunner {
         // 设置活动开始时间为现在
         activity.setStartTime(now);
 
-        // 设置活动结束时间为开始时间后7天
+        // 设置活动结束时间为开始时间后1小时
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(now);
-        calendar.add(Calendar.DAY_OF_MONTH, 7);
+        calendar.add(Calendar.HOUR_OF_DAY, 1);
         activity.setEndTime(calendar.getTime());
 
         // 设置活动类型为固定时间型

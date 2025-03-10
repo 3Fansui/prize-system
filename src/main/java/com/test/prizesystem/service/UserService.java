@@ -14,7 +14,18 @@ import com.test.prizesystem.model.entity.User;
 public interface UserService {
     
     /**
-     * 用户注册
+     * 用户注册（指定ID）
+     * @param id 指定的用户ID，为null时自动生成
+     * @param username 用户名
+     * @param password 密码
+     * @param drawQuota 抽奖次数配额
+     * @param winQuota 中奖次数配额
+     * @return 注册成功的用户信息
+     */
+    User register(Integer id, String username, String password, Integer drawQuota, Integer winQuota);
+    
+    /**
+     * 用户注册（自动生成ID）
      * @param username 用户名
      * @param password 密码
      * @param drawQuota 抽奖次数配额

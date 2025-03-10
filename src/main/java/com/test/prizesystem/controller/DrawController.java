@@ -7,7 +7,6 @@ import com.test.prizesystem.service.DrawService;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -42,7 +41,7 @@ public class DrawController {
      */
     @PostMapping
     @ApiOperation(value = "执行抽奖", notes = "用户参与抽奖活动并获取抽奖结果")
-    public DrawResponse draw(@ApiParam(value = "抽奖请求参数", required = true) @RequestBody DrawRequest request) {
+    public DrawResponse draw(@RequestBody DrawRequest request) {
         log.info("收到抽奖请求: {}", request);
         DrawResponse response = drawService.draw(request);
         log.info("抽奖结果: {}", response);

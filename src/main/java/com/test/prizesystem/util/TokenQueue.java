@@ -43,19 +43,13 @@ public class TokenQueue {
      * 生成令牌并添加到对应活动的队列
      * @param activityId 活动ID
      * @param prize 奖品对象
-     * @param baseTimestamp 活动开始时间戳(秒级)
+     * @param tokenTimestamp 令牌时间戳(秒级)
      * @return 生成的令牌
      */
-    public Token generateToken(Integer activityId, Prize prize, long baseTimestamp) {
+    public Token generateToken(Integer activityId, Prize prize, long tokenTimestamp) {
         // 确保活动队列存在
         ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.computeIfAbsent(
                 activityId, k -> new ConcurrentLinkedDeque<>());
-        
-        // 生成随机时间戳 - 根据新规则实现
-        // baseTimestamp是活动开始时间，在活动时间范围内随机分配
-        // 这里假设活动持续时间为endTime - startTime，即endTime传入前已计算好
-        long randomOffset = (long)(Math.random() * 3600); // 假设最长活动时间为1小时
-        long tokenTimestamp = baseTimestamp + randomOffset;
         
         Token token = new Token();
         token.setId(idGenerator.getAndIncrement());
@@ -148,6 +142,9 @@ public class TokenQueue {
         
         // 如果队首令牌的时间戳还大于当前时间，说明没有可用令牌
         if (token.getTokenTimestamp() > currentTimestamp) {
+            // 重要：不符合条件的令牌不应该被消费
+            log.debug("当前令牌时间戳({})大于当前时间({})，未到使用时间", 
+                    token.getTokenTimestamp(), currentTimestamp);
             return null;
         }
         
@@ -157,6 +154,7 @@ public class TokenQueue {
     
     /**
      * 将未使用的令牌重新放回对应活动的队列头部
+     * 注意：这里一定使用头插法，保证小时间戳的令牌优先被消费
      */
     public void returnToken(Token token) {
         if (token != null) {
@@ -164,9 +162,10 @@ public class TokenQueue {
             ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
             
             if (tokenQueue != null) {
+                // 始终使用头插法返回令牌，确保小时间戳的令牌优先被消费
                 tokenQueue.addFirst(token);
                 if (log.isDebugEnabled()) {
-                    log.debug("令牌已返回队列: activityId={}, id={}, prizeName={}, timestamp={}", 
+                    log.debug("令牌已返回队列头部: activityId={}, id={}, prizeName={}, timestamp={}", 
                             activityId, token.getId(), token.getPrizeName(), token.getTokenTimestamp());
                 }
             } else {

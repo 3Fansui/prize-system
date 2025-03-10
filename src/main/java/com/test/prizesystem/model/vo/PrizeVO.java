@@ -1,7 +1,6 @@
 package com.test.prizesystem.model.vo;
 
 import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 /**
@@ -15,9 +14,7 @@ import lombok.Data;
 @Data
 @ApiModel(value = "奖品信息", description = "返回给前端展示的奖品信息")
 public class PrizeVO {
-    @ApiModelProperty(value = "奖品ID", example = "1", position = 1)
     private Integer id;
     
-    @ApiModelProperty(value = "奖品名称", example = "苹果Iphone 15", position = 2)
     private String name;
 }

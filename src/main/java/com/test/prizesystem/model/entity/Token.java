@@ -17,7 +17,7 @@ import java.util.Date;
 @Data
 @ApiModel(value = "令牌信息", description = "控制奖品发放的令牌")
 public class Token {
-    @ApiModelProperty(value = "令牌ID", example = "1", position = 1)
+    @ApiModelProperty(value = "令牌ID", example = "1000", position = 1)
     private Long id;
     
     @ApiModelProperty(value = "活动ID", example = "1", position = 2)
@@ -29,9 +29,9 @@ public class Token {
     @ApiModelProperty(value = "奖品名称", example = "iPhone 14", position = 4)
     private String prizeName;
     
-    @ApiModelProperty(value = "令牌时间戳", example = "1615456800000", notes = "指定令牌使用的时间", position = 5)
+    @ApiModelProperty(value = "令牌时间戳", example = "1615456800", notes = "指定令牌使用的时间（秒级时间戳）", position = 5)
     private Long tokenTimestamp;
     
-    @ApiModelProperty(value = "创建时间", position = 6)
+    @ApiModelProperty(value = "创建时间", example = "2025-01-01 00:00:00", position = 6)
     private Date createTime;
 }

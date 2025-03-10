@@ -4,12 +4,13 @@ import com.test.prizesystem.model.entity.User;
 import com.test.prizesystem.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,6 +35,7 @@ public class UserController {
      * 
      * @param username 用户名
      * @param password 密码
+     * @param id 指定用户ID
      * @param drawQuota 抽奖配额
      * @param winQuota 中奖配额
      * @return 注册结果
@@ -41,13 +43,14 @@ public class UserController {
     @PostMapping("/register")
     @ApiOperation(value = "用户注册", notes = "创建新用户并分配抽奖和中奖配额")
     public Map<String, Object> register(
-            @ApiParam(value = "用户名", required = true) @RequestParam String username,
-            @ApiParam(value = "密码", required = true) @RequestParam String password,
-            @ApiParam(value = "抽奖配额", defaultValue = "100") @RequestParam(required = false) Integer drawQuota,
-            @ApiParam(value = "中奖配额", defaultValue = "10") @RequestParam(required = false) Integer winQuota) {
+            @RequestParam String username,
+            @RequestParam String password,
+            @RequestParam(required = false) Integer id,
+            @RequestParam(required = false) Integer drawQuota,
+            @RequestParam(required = false) Integer winQuota) {
         
         Map<String, Object> result = new HashMap<>();
-        User user = userService.register(username, password, drawQuota, winQuota);
+        User user = userService.register(id, username, password, drawQuota, winQuota);
         
         if (user != null) {
             result.put("success", true);
@@ -73,8 +76,8 @@ public class UserController {
     @PostMapping("/login")
     @ApiOperation(value = "用户登录", notes = "验证用户身份并返回用户信息")
     public Map<String, Object> login(
-            @ApiParam(value = "用户名", required = true) @RequestParam String username,
-            @ApiParam(value = "密码", required = true) @RequestParam String password) {
+            @RequestParam String username,
+            @RequestParam String password) {
         
         Map<String, Object> result = new HashMap<>();
         User user = userService.login(username, password);
@@ -107,7 +110,7 @@ public class UserController {
     @GetMapping("/{userId}")
     @ApiOperation(value = "获取用户信息", notes = "根据用户ID获取用户详细信息")
     public Map<String, Object> getUserInfo(
-            @ApiParam(value = "用户ID", required = true) @PathVariable Integer userId) {
+            @PathVariable Integer userId) {
         
         Map<String, Object> result = new HashMap<>();
         User user = userService.getUser(userId);
@@ -127,6 +130,47 @@ public class UserController {
             result.put("success", false);
             result.put("message", "用户不存在");
         }
+        
+        return result;
+    }
+    
+    /**
+     * 批量创建测试用户
+     * 
+     * @param startId 起始ID
+     * @param count 用户数量
+     * @param usernamePrefix 用户名前缀
+     * @param password 密码
+     * @param drawQuota 抽奖配额
+     * @param winQuota 中奖配额
+     * @return 创建结果
+     */
+    @PostMapping("/batchCreate")
+    @ApiOperation(value = "批量创建用户", notes = "批量创建用户用于压测")
+    public Map<String, Object> batchCreateUsers(
+            @RequestParam Integer startId,
+            @RequestParam Integer count,
+            @RequestParam(required = false) String usernamePrefix,
+            @RequestParam(required = false) String password,
+            @RequestParam(required = false) Integer drawQuota,
+            @RequestParam(required = false) Integer winQuota) {
+        
+        Map<String, Object> result = new HashMap<>();
+        List<Integer> createdIds = new ArrayList<>();
+        
+        for (int i = 0; i < count; i++) {
+            int id = startId + i;
+            String username = usernamePrefix + id;
+            
+            User user = userService.register(id, username, password, drawQuota, winQuota);
+            if (user != null) {
+                createdIds.add(user.getId());
+            }
+        }
+        
+        result.put("success", true);
+        result.put("message", String.format("成功创建 %d 个用户", createdIds.size()));
+        result.put("createdIds", createdIds);
         
         return result;
     }

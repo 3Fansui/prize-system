@@ -53,52 +53,59 @@ public class DrawServiceImpl implements DrawService {
             return new DrawResponse(false, activity.getStatus() == 0 ? "活动未开始" : "活动已结束");
         }
         
+        // 1. 先检查用户抽奖资格，不具备资格则直接返回，避免浪费令牌
         // 检查用户抽奖次数限制
-        if (!userService.tryDraw(userId)) {
-            return new DrawResponse(false, "抽奖次数已用完");
+        try {
+            if (!userService.tryDraw(userId)) {
+                return new DrawResponse(false, "抽奖次数已用完");
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("抽奖错误：{}", e.getMessage());
+            return new DrawResponse(false, e.getMessage());
         }
         
-        // 直接获取活动的令牌队列大小
-        int tokenCount = tokenService.getTokenQueueSize(activityId);
+        // 2. 接着检查用户中奖资格，这里做预判断，避免浪费令牌
+        boolean canWin = false;
+        try {
+            canWin = userService.tryWin(userId);
+            if (!canWin) {
+                log.info("用户 {} 已达到最大中奖上限，不再消费令牌", userId);
+                return new DrawResponse(true, "未中奖", null);
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("检查中奖资格错误：{}", e.getMessage());
+            return new DrawResponse(false, e.getMessage());
+        }
         
-        // 如果令牌队列为空，直接返回奖品已抽完
+        // 3. 检查令牌队列是否为空
+        int tokenCount = tokenService.getTokenQueueSize(activityId);
         if (tokenCount == 0) {
             log.info("活动 {} 的奖品已全部抽完", activityId);
             return new DrawResponse(true, "奖品已抽完", null);
         }
 
         try {
-            // 获取当前时间戳（秒级）
+            // 4. 获取当前时间戳（秒级）并尝试获取可用的令牌
             long currentTime = System.currentTimeMillis() / 1000;
-            
-            // 从令牌服务获取当前时间有效的令牌
             Token token = tokenService.getAvailableToken(activity.getId(), currentTime);
             
-            if (token != null) {
-                // 判断是否可以中奖（预检查，避免奖品浪费）
-                boolean canWin = userService.tryWin(userId);
-                
-                // 如果用户无法中奖（已达到上限），则将令牌放回队列
-                if (!canWin) {
-                    log.info("用户 {} 已达到最大中奖次数，令牌返回队列", userId);
-                    tokenService.returnToken(token);
-                    return new DrawResponse(true, "未中奖", null);
-                }
-                
-                // 用户中奖，返回奖品信息
-                log.info("用户 {} 在活动 {} 中奖，获得奖品: {} (ID: {})",
-                        userId, activityId, token.getPrizeName(), token.getPrizeId());
-                
-                // 构建奖品视图对象返回
-                PrizeVO prizeVO = new PrizeVO();
-                prizeVO.setId(token.getPrizeId());
-                prizeVO.setName(token.getPrizeName());
-                
-                return new DrawResponse(true, "恭喜中奖", prizeVO);
-            } else {
-                log.info("活动 {} 当前无可用令牌，用户 {} 未中奖", activityId, userId);
+            // 5. 如果没有可用令牌，说明当前时间戳还没有可用令牌
+            if (token == null) {
+                log.info("活动 {} 当前时间的令牌已用完，用户 {} 未中奖", activityId, userId);
                 return new DrawResponse(true, "未中奖", null);
             }
+            
+            // 6. 此时用户一定可以中奖，因为前面已经检查了用户中奖资格
+            // 用户中奖，返回奖品信息
+            log.info("用户 {} 在活动 {} 中奖，获得奖品: {} (ID: {})",
+                    userId, activityId, token.getPrizeName(), token.getPrizeId());
+            
+            // 构建奖品视图对象返回
+            PrizeVO prizeVO = new PrizeVO();
+            prizeVO.setId(token.getPrizeId());
+            prizeVO.setName(token.getPrizeName());
+            
+            return new DrawResponse(true, "恭喜中奖", prizeVO);
         } catch (Exception e) {
             log.error("抽奖过程发生异常", e);
             return new DrawResponse(false, "抽奖过程发生错误", null);

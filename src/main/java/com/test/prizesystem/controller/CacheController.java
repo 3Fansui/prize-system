@@ -24,8 +24,7 @@ import java.util.Map;
  * <p>
  * 提供访问系统内部状态、缓存数据和统计信息的接口。
  * 简化版仅保留基本监控功能。
- * 
- * @author MCP生成
+ *
  * @version 1.0
  */
 @Slf4j
