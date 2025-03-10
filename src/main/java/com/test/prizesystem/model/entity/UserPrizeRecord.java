@@ -29,6 +29,9 @@ public class UserPrizeRecord {
     @ApiModelProperty(value = "奖品ID", example = "2", position = 4)
     private Integer prizeId;
     
-    @ApiModelProperty(value = "中奖时间", example = "2025-01-01 00:00:00", position = 5)
+    @ApiModelProperty(value = "奖品名称", example = "iPhone 14", position = 5)
+    private String prizeName;
+    
+    @ApiModelProperty(value = "中奖时间", example = "2025-01-01 00:00:00", position = 6)
     private Date winTime;
 }

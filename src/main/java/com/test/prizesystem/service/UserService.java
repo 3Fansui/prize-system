@@ -1,6 +1,9 @@
 package com.test.prizesystem.service;
 
 import com.test.prizesystem.model.entity.User;
+import com.test.prizesystem.model.entity.UserPrizeRecord;
+
+import java.util.List;
 
 /**
  * 用户服务接口
@@ -76,4 +79,12 @@ public interface UserService {
      * @return 剩余次数
      */
     int getRemainingWins(Integer userId);
+    
+    /**
+     * 获取用户中奖记录
+     * @param userId 用户ID
+     * @param limit 最大返回数量
+     * @return 中奖记录列表
+     */
+    List<UserPrizeRecord> getUserPrizeRecords(Integer userId, int limit);
 }

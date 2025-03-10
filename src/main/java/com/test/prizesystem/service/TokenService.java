@@ -42,10 +42,10 @@ public interface TokenService {
     void returnToken(Token token);
 
     /**
-     * 获取活动的令牌队列详细信息
+     * 获取活动的令牌详细信息
      * 
      * @param activityId 活动ID
-     * @return 令牌队列信息
+     * @return 令牌详细信息，包含总数量和简化的令牌数据
      */
     Map<String, Object> getTokenDetails(Integer activityId);
     

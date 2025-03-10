@@ -1,6 +1,7 @@
 package com.test.prizesystem.controller;
 
 import com.test.prizesystem.model.entity.User;
+import com.test.prizesystem.model.entity.UserPrizeRecord;
 import com.test.prizesystem.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -102,15 +103,17 @@ public class UserController {
     }
     
     /**
-     * 获取用户信息
+     * 获取用户信息及中奖记录
      * 
      * @param userId 用户ID
-     * @return 用户信息
+     * @param prizeLimit 中奖记录数量限制
+     * @return 用户信息及中奖记录
      */
     @GetMapping("/{userId}")
-    @ApiOperation(value = "获取用户信息", notes = "根据用户ID获取用户详细信息")
+    @ApiOperation(value = "获取用户信息", notes = "返回用户详细信息及中奖记录")
     public Map<String, Object> getUserInfo(
-            @PathVariable Integer userId) {
+            @PathVariable Integer userId,
+            @RequestParam(defaultValue = "10") int prizeLimit) {
         
         Map<String, Object> result = new HashMap<>();
         User user = userService.getUser(userId);
@@ -126,6 +129,11 @@ public class UserController {
             result.put("winCount", user.getWinCount());
             result.put("remainingWins", user.getRemainingWins());
             result.put("lastLoginTime", user.getLastLoginTime());
+            
+            // 获取用户中奖记录
+            List<UserPrizeRecord> records = userService.getUserPrizeRecords(userId, prizeLimit);
+            result.put("prizeRecords", records);
+            result.put("prizeCount", records.size());
         } else {
             result.put("success", false);
             result.put("message", "用户不存在");

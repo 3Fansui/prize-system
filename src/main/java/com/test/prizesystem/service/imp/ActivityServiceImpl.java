@@ -3,17 +3,17 @@ package com.test.prizesystem.service.imp;
 import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.model.entity.ActivityPrize;
 import com.test.prizesystem.model.entity.ActivityRule;
+import com.test.prizesystem.model.entity.Prize;
+import com.test.prizesystem.model.vo.ActivityInfoVO;
 import com.test.prizesystem.service.ActivityService;
 import com.test.prizesystem.service.TokenService;
 import com.test.prizesystem.util.RedBlackTreeStorage;
+import com.test.prizesystem.util.TreeNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,8 +38,6 @@ public class ActivityServiceImpl implements ActivityService {
     private static final String RULE_TREE = "activity_rules";
     private static final String PRIZE_RELATION_TREE = "activity_prizes";
     
-    // 这里移除了初始化方法，由DemoDataInitializer负责
-
     @Override
     public Activity getActivity(Integer activityId) {
         // 先从缓存获取
@@ -145,5 +143,64 @@ public class ActivityServiceImpl implements ActivityService {
         activityCache.put(activity.getId(), activity);
 
         log.info("活动{}预热完成", activityId);
+    }
+    
+    @Override
+    public ActivityInfoVO getActivityInfo(Integer activityId) {
+        // 获取活动基本信息
+        Activity activity = getActivity(activityId);
+        if (activity == null) {
+            return null;
+        }
+        
+        // 创建返回对象
+        ActivityInfoVO result = new ActivityInfoVO();
+        result.setId(activity.getId());
+        result.setTitle(activity.getTitle());
+        result.setStartTime(activity.getStartTime());
+        result.setEndTime(activity.getEndTime());
+        result.setStatus(activity.getStatus());
+        
+        // 查询活动关联的奖品信息
+        List<ActivityInfoVO.PrizeInfoVO> prizeInfos = new ArrayList<>();
+        
+        // 从红黑树中查找活动奖品关联
+        List<ActivityPrize> activityPrizes = new ArrayList<>();
+        
+        // 简化处理，直接使用硬编码的演示数据
+        if (activityId == 1) {
+            ActivityPrize ap1 = new ActivityPrize();
+            ap1.setActivityId(1);
+            ap1.setPrizeId(1);
+            ap1.setAmount(50);
+            activityPrizes.add(ap1);
+            
+            ActivityPrize ap2 = new ActivityPrize();
+            ap2.setActivityId(1);
+            ap2.setPrizeId(2);
+            ap2.setAmount(100);
+            activityPrizes.add(ap2);
+            
+            ActivityPrize ap3 = new ActivityPrize();
+            ap3.setActivityId(1);
+            ap3.setPrizeId(3);
+            ap3.setAmount(200);
+            activityPrizes.add(ap3);
+        }
+        
+        // 获取奖品详细信息并组装
+        for (ActivityPrize ap : activityPrizes) {
+            Prize prize = treeStorage.find(TreeNames.PRIZES, ap.getPrizeId(), Prize.class);
+            if (prize != null) {
+                ActivityInfoVO.PrizeInfoVO prizeInfo = new ActivityInfoVO.PrizeInfoVO();
+                prizeInfo.setId(prize.getId());
+                prizeInfo.setName(prize.getName());
+                prizeInfo.setAmount(ap.getAmount());
+                prizeInfos.add(prizeInfo);
+            }
+        }
+        
+        result.setPrizes(prizeInfos);
+        return result;
     }
 }

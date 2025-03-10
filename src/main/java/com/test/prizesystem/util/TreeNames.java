@@ -34,7 +34,10 @@ public enum TreeNames {
     TOKENS("tokens"),
     
     /** 用户统计数据存储 */
-    USER_STATS("user_stats");
+    USER_STATS("user_stats"),
+    
+    /** 活动中奖记录存储 */
+    ACTIVITY_PRIZE_RECORDS("activity_prize_records");
     
     private final String treeName;
     

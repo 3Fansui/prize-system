@@ -6,13 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Random;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -24,7 +21,7 @@ import java.util.stream.Collectors;
  * 使用活动ID隔离不同活动的令牌，提高并发性能。
  * 
  * @author MCP生成
- * @version 4.0
+ * @version 5.0
  */
 @Slf4j
 @Component
@@ -32,12 +29,6 @@ public class TokenQueue {
     
     // 使用Map存储每个活动ID对应的令牌队列
     private final Map<Integer, ConcurrentLinkedDeque<Token>> activityTokenQueues = new ConcurrentHashMap<>();
-    
-    // 用于生成唯一ID
-    private final AtomicLong idGenerator = new AtomicLong(1);
-    
-    // 随机数生成器
-    private final Random random = new Random();
     
     /**
      * 生成令牌并添加到对应活动的队列
@@ -52,14 +43,12 @@ public class TokenQueue {
                 activityId, k -> new ConcurrentLinkedDeque<>());
         
         Token token = new Token();
-        token.setId(idGenerator.getAndIncrement());
         token.setActivityId(activityId);
         token.setPrizeId(prize.getId());
         token.setPrizeName(prize.getName());
         token.setTokenTimestamp(tokenTimestamp);
-        token.setCreateTime(new Date());
         
-        // 使用二分查找优化的方式添加令牌到对应活动的队列
+        // 使用优化的方式添加令牌到对应活动的队列
         addTokenInOrder(activityId, token);
         
         if (log.isDebugEnabled()) {
@@ -71,7 +60,7 @@ public class TokenQueue {
     }
     
     /**
-     * 使用二分查找优化的方式添加令牌到指定活动的队列
+     * 使用优化的方式添加令牌到指定活动的队列
      * 注意：由于ConcurrentLinkedDeque不支持随机访问，
      * 这里的优化只是减少了比较次数，但仍然需要O(n)的时间复杂度
      * 
@@ -165,8 +154,8 @@ public class TokenQueue {
                 // 始终使用头插法返回令牌，确保小时间戳的令牌优先被消费
                 tokenQueue.addFirst(token);
                 if (log.isDebugEnabled()) {
-                    log.debug("令牌已返回队列头部: activityId={}, id={}, prizeName={}, timestamp={}", 
-                            activityId, token.getId(), token.getPrizeName(), token.getTokenTimestamp());
+                    log.debug("令牌已返回队列头部: activityId={}, prizeName={}, timestamp={}", 
+                            activityId, token.getPrizeName(), token.getTokenTimestamp());
                 }
             } else {
                 log.warn("尝试返回令牌到不存在的活动队列: activityId={}", activityId);

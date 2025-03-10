@@ -1,5 +1,7 @@
 package com.test.prizesystem.service.imp;
 
+import com.test.prizesystem.async.EventQueue;
+import com.test.prizesystem.async.UserDrawEvent;
 import com.test.prizesystem.model.dto.DrawRequest;
 import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.model.entity.Token;
@@ -13,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.test.prizesystem.service.UserService;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 /**
  * 抽奖服务实现类
@@ -22,7 +26,7 @@ import com.test.prizesystem.service.UserService;
  * 已简化工作流程，移除了统计服务依赖，聚焦于核心抽奖逻辑。
  * 
  * @author MCP生成
- * @version 4.0
+ * @version 5.0
  */
 @Slf4j
 @Service
@@ -36,6 +40,9 @@ public class DrawServiceImpl implements DrawService {
     
     @Autowired
     private UserService userService;
+    
+    @Autowired(required = false)
+    private EventQueue eventQueue;
 
     // 使用UserService管理用户抽奖限制
     @Override
@@ -86,7 +93,9 @@ public class DrawServiceImpl implements DrawService {
 
         try {
             // 4. 获取当前时间戳（秒级）并尝试获取可用的令牌
-            long currentTime = System.currentTimeMillis() / 1000;
+            // 使用UTC+8时区
+            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+            long currentTime = calendar.getTimeInMillis() / 1000;
             Token token = tokenService.getAvailableToken(activity.getId(), currentTime);
             
             // 5. 如果没有可用令牌，说明当前时间戳还没有可用令牌
@@ -104,6 +113,27 @@ public class DrawServiceImpl implements DrawService {
             PrizeVO prizeVO = new PrizeVO();
             prizeVO.setId(token.getPrizeId());
             prizeVO.setName(token.getPrizeName());
+            
+            // 异步记录中奖信息
+            if (eventQueue != null) {
+                try {
+                    UserDrawEvent event = new UserDrawEvent();
+                    event.setUserId(userId);
+                    event.setActivityId(activityId);
+                    // 使用UTC+8时区
+                    Calendar eventCalendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+                    event.setTimestamp(eventCalendar.getTimeInMillis());
+                    event.setPrizeId(token.getPrizeId());
+                    event.setPrizeName(token.getPrizeName());
+                    
+                    // 异步发送到队列
+                    eventQueue.offer(event);
+                    log.debug("异步提交中奖事件: 用户ID={}, 奖品={}", userId, token.getPrizeName());
+                } catch (Exception ex) {
+                    // 异步处理失败不影响抽奖结果
+                    log.error("异步记录中奖信息失败", ex);
+                }
+            }
             
             return new DrawResponse(true, "恭喜中奖", prizeVO);
         } catch (Exception e) {

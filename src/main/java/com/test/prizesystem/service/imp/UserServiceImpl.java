@@ -1,12 +1,15 @@
 package com.test.prizesystem.service.imp;
 
 import com.test.prizesystem.model.entity.User;
+import com.test.prizesystem.model.entity.UserPrizeRecord;
 import com.test.prizesystem.service.UserService;
 import com.test.prizesystem.util.RedBlackTreeStorage;
 import com.test.prizesystem.util.TreeNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 import javax.annotation.PostConstruct;
 import java.util.Date;
@@ -192,5 +195,10 @@ public class UserServiceImpl implements UserService {
     public int getRemainingWins(Integer userId) {
         User user = getUser(userId);
         return user != null ? user.getRemainingWins() : 0;
+    }
+    
+    @Override
+    public List<UserPrizeRecord> getUserPrizeRecords(Integer userId, int limit) {
+        return treeStorage.getUserPrizeRecords(userId, UserPrizeRecord.class, limit);
     }
 }

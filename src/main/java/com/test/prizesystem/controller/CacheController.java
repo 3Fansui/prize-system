@@ -1,7 +1,6 @@
 package com.test.prizesystem.controller;
 
 import com.test.prizesystem.model.entity.Token;
-
 import com.test.prizesystem.service.TokenService;
 import com.test.prizesystem.service.UserService;
 import com.test.prizesystem.util.RedBlackTreeStorage;
@@ -46,10 +45,10 @@ public class CacheController {
     private UserService userService;
 
     /**
-     * 查看令牌缓存信息
+     * 查看活动令牌信息
      */
     @GetMapping("/tokens/{activityId}")
-    @ApiOperation(value = "获取活动令牌详情", notes = "返回指定活动的令牌详细信息")
+    @ApiOperation(value = "查看活动令牌信息", notes = "返回活动的令牌数量及详细信息")
     public Map<String, Object> getTokenDetails(
             @ApiParam(value = "活动ID", required = true, example = "1") @PathVariable Integer activityId) {
         return tokenService.getTokenDetails(activityId);
@@ -85,22 +84,5 @@ public class CacheController {
         status.put("usersCount", treeStorage.size(TreeNames.USERS));
         
         return status;
-    }
-    
-    /**
-     * 获取令牌队列内容
-     */
-    @GetMapping("/token-queue/{activityId}")
-    @ApiOperation(value = "查看活动令牌队列", notes = "返回指定活动的令牌队列内容")
-    public Map<String, Object> getTokenQueueContent(
-            @ApiParam(value = "活动ID", required = true, example = "1") @PathVariable Integer activityId) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("queueSize", tokenQueue.size(activityId));
-        
-        // 获取队列中的令牌（限制10个）
-        List<Token> tokens = tokenQueue.getTokens(activityId, 10);
-        result.put("tokens", tokens);
-        
-        return result;
     }
 }

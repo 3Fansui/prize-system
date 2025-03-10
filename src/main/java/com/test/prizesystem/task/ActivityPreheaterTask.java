@@ -10,6 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 /**
  * 活动预热任务
@@ -42,11 +44,14 @@ public class ActivityPreheaterTask {
         // 仅扫描活动ID为1的演示活动（简化版）
         Activity activity = treeStorage.find(TreeNames.ACTIVITIES, 1, Activity.class);
         if (activity != null && activity.getStatus() == 0) {
-            Date now = new Date();
+            // 使用UTC+8时区
+            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+            Date now = calendar.getTime();
             Date startTime = activity.getStartTime();
             
             // 如果开始时间在当前时间和未来1分钟之间
-            if (startTime.after(now) && startTime.getTime() <= now.getTime() + 60 * 1000) {
+            // 使用同一时区的Calendar计算时间
+            if (startTime.after(now) && startTime.getTime() <= calendar.getTimeInMillis() + 60 * 1000) {
                 try {
                     log.info("开始预热活动: {}", activity.getTitle());
                     activityService.preheatActivity(activity.getId());

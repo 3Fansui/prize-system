@@ -13,7 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.IntStream;
+import java.util.TimeZone;
+import java.time.ZoneId;
 
 /**
  * 令牌服务实现类
@@ -23,7 +24,7 @@ import java.util.stream.IntStream;
  * 并使用改进的时间戳生成算法确保奖品分布更加均匀。
  * 
  * @author MCP生成
- * @version 4.0
+ * @version 5.0
  */
 @Slf4j
 @Service
@@ -43,9 +44,18 @@ public class TokenServiceImpl implements TokenService {
         // 清空当前活动的令牌队列
         tokenQueue.clear(activityId);
         
+        // 确保使用UTC+8时区处理时间
+        TimeZone chinaTimeZone = TimeZone.getTimeZone("Asia/Shanghai");
+        
         // 获取活动开始和结束时间（秒级时间戳）
-        long startTime = activity.getStartTime().getTime() / 1000;
-        long endTime = activity.getEndTime().getTime() / 1000;
+        Calendar calendarStart = Calendar.getInstance(chinaTimeZone);
+        calendarStart.setTime(activity.getStartTime());
+        long startTime = calendarStart.getTimeInMillis() / 1000;
+        
+        Calendar calendarEnd = Calendar.getInstance(chinaTimeZone);
+        calendarEnd.setTime(activity.getEndTime());
+        long endTime = calendarEnd.getTimeInMillis() / 1000;
+        
         long duration = endTime - startTime;
 
         log.info("活动时间范围: {} 秒 (从 {} 到 {})", duration, 
@@ -92,7 +102,6 @@ public class TokenServiceImpl implements TokenService {
             long tokenTimestamp = startTime + (long)(position * duration);
             
             // 添加少量随机偏移，避免完全均匀导致的峰值
-            // 对于1小时的活动，使用更小的偏移范围
             long randomJitter = (long)(Math.random() * 20) - 10; // ±10秒的随机偏移
             tokenTimestamp = Math.max(startTime, Math.min(endTime, tokenTimestamp + randomJitter));
             
@@ -123,8 +132,8 @@ public class TokenServiceImpl implements TokenService {
         Token token = tokenQueue.getAvailableToken(activityId, timestamp);
         
         if (token != null) {
-            log.debug("找到可用令牌: 活动ID={}, 令牌ID={}, 奖品名称={}, 时间戳={} ({})", 
-                    activityId, token.getId(), token.getPrizeName(), 
+            log.debug("找到可用令牌: 活动ID={}, 奖品名称={}, 时间戳={} ({})", 
+                    activityId, token.getPrizeName(), 
                     token.getTokenTimestamp(), new Date(token.getTokenTimestamp() * 1000));
         } else {
             log.debug("活动 {} 在时间戳 {} 没有可用令牌", activityId, timestamp);
@@ -148,19 +157,38 @@ public class TokenServiceImpl implements TokenService {
         result.put("totalTokens", queueSize);
         result.put("activityId", activityId);
         
-        // 获取一些示例令牌进行展示
-        List<Token> sampleTokens = tokenQueue.getTokens(activityId, 5);
+        // 获取所有令牌进行展示（限前20个令牌）
+        List<Token> sampleTokens = tokenQueue.getTokens(activityId, 20);
         List<Map<String, Object>> tokenInfos = new ArrayList<>();
         
         for (Token token : sampleTokens) {
             Map<String, Object> tokenInfo = new HashMap<>();
-            tokenInfo.put("id", token.getId());
+            tokenInfo.put("activityId", activityId);
+            tokenInfo.put("prizeId", token.getPrizeId());
             tokenInfo.put("prizeName", token.getPrizeName());
-            tokenInfo.put("timestamp", new Date(token.getTokenTimestamp() * 1000)); // 转换为毫秒级显示
+            // 将时间戳字段改为更有意义的名称
+            tokenInfo.put("tokenTimestamp", token.getTokenTimestamp());
+            
+            // 添加格式化的日期时间，转换为毫秒级的Date对象
+            Date tokenDate = new Date(token.getTokenTimestamp() * 1000);
+            
+            // 添加可读性更高的格式化字符串（中国时区）
+            // 使用UTC+8时区
+            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+            calendar.setTime(tokenDate);
+            String formattedDateTime = String.format("%d-%02d-%02d %02d:%02d:%02d",
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH) + 1,
+                    calendar.get(Calendar.DAY_OF_MONTH),
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    calendar.get(Calendar.SECOND));
+            
+            tokenInfo.put("drawTime", formattedDateTime);
             tokenInfos.add(tokenInfo);
         }
         
-        result.put("sampleTokens", tokenInfos);
+        result.put("tokens", tokenInfos);
         
         return result;
     }

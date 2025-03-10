@@ -352,4 +352,26 @@ public class RedBlackTreeStorage {
         
         collectNodes(node.right, result, clazz, limit);
     }
+    
+    /**
+     * 获取用户中奖记录
+     * @param userId 用户ID
+     * @param limit 限制返回数量
+     * @return 中奖记录列表
+     */
+    public <T> List<T> getUserPrizeRecords(Integer userId, Class<T> clazz, int limit) {
+        String treeKey = TreeNames.USER_PRIZE_RECORDS.getTreeName() + ":" + userId;
+        return getSampleData(treeKey, clazz, limit);
+    }
+    
+    /**
+     * 获取活动中奖记录
+     * @param activityId 活动ID
+     * @param limit 限制返回数量
+     * @return 中奖记录列表
+     */
+    public <T> List<T> getActivityPrizeRecords(Integer activityId, Class<T> clazz, int limit) {
+        String treeKey = TreeNames.ACTIVITY_PRIZE_RECORDS.getTreeName() + ":" + activityId;
+        return getSampleData(treeKey, clazz, limit);
+    }
 }
