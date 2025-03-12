@@ -11,7 +11,7 @@ import java.util.List;
  * 提供用户注册、登录和用户信息管理功能。
  * 专门为压测场景设计，管理用户抽奖和中奖配额。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 public interface UserService {

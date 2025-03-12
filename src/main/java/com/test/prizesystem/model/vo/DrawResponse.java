@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
  * <p>
  * 封装抽奖结果信息，返回给前端展示
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

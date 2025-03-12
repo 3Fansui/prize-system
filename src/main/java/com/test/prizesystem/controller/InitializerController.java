@@ -17,7 +17,7 @@ import java.util.Map;
  * 提供手动初始化系统数据的接口
  * </p>
  *
- * @author MCP
+ * @author wu
  */
 @RestController
 @RequestMapping("/api/system")

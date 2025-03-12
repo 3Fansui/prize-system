@@ -11,7 +11,7 @@ import java.util.Date;
  * 记录用户的中奖信息，包含用户ID、活动ID、奖品ID和名称及中奖时间等信息。
  * 该记录用于后续的奖品发放、统计分析等。
  *
- * @author MCP生成
+ * @author wu
  * @version 2.0
  */
 @Data

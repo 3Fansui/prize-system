@@ -9,7 +9,7 @@ import lombok.Data;
  * <p>
  * 用于接收客户端发起的抽奖请求参数
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

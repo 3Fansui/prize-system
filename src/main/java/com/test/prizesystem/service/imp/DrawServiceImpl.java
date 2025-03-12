@@ -26,7 +26,7 @@ import java.util.Date;
  * 令牌直接包含奖品ID和名称，简化了抽奖过程。
  * 已简化工作流程，移除了统计服务依赖，聚焦于核心抽奖逻辑。
  * 
- * @author MCP生成
+ * @author wu
  * @version 6.0
  */
 @Slf4j

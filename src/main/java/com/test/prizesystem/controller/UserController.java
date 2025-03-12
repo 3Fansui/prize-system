@@ -19,7 +19,7 @@ import java.util.Map;
  * <p>
  * 提供用户注册、登录和用户信息查询API。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Slf4j

@@ -11,7 +11,7 @@ import lombok.Data;
  * 每个令牌代表一个实际的奖品，并直接包含基本奖品信息。
  * 简化版本：移除了不必要的id和创建时间字段。
  * 
- * @author MCP生成
+ * @author wu
  * @version 4.0
  */
 @Data

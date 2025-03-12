@@ -12,7 +12,7 @@ import java.util.Map;
  * <p>
  * 提供令牌生成、获取和管理的服务。
  * 
- * @author MCP生成
+ * @author wu
  * @version 2.0
  */
 public interface TokenService {

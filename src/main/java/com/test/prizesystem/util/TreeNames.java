@@ -5,7 +5,7 @@ package com.test.prizesystem.util;
  * <p>
  * 集中管理系统中所有红黑树的名称，避免使用字符串常量带来的错误。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 public enum TreeNames {

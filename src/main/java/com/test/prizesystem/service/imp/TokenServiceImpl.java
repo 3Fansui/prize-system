@@ -23,7 +23,7 @@ import java.time.ZoneId;
  * 简化了抽奖过程中的数据访问。系统为每个活动维护独立的令牌队列，
  * 并使用改进的时间戳生成算法确保奖品分布更加均匀。
  * 
- * @author MCP生成
+ * @author wu
  * @version 5.0
  */
 @Slf4j

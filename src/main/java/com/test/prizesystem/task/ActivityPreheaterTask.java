@@ -19,7 +19,7 @@ import java.util.TimeZone;
  * 预热处理包括生成奖品令牌、将令牌放入双端队列以及准备其他活动资源。
  * 通过预热机制，系统能够提前准备好抽奖所需的资源，减少活动启动时的响应延迟。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Slf4j

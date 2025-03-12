@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * 每个令牌包含奖品ID和名称，简化抽奖过程中的数据访问。
  * 使用活动ID隔离不同活动的令牌，提高并发性能。
  * 
- * @author MCP生成
+ * @author wu
  * @version 5.0
  */
 @Slf4j

@@ -10,7 +10,7 @@ import java.util.Date;
  * 表示抽奖系统中的活动信息，包含活动的名称、时间范围、状态等。
  * 活动是抽奖系统的核心元素，用户及奖品都会关联到特定活动。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

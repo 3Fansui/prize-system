@@ -11,7 +11,7 @@ import java.util.Date;
  * 表示活动与奖品的关系，定义了活动中特定奖品的数量。
  * 一个活动可以有多个奖品，一个奖品也可以参与多个活动。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

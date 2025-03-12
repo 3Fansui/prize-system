@@ -20,7 +20,7 @@ import static com.test.prizesystem.util.RedBlackTree.Color.RED;
  * 此数据结构主要用于系统中需要高效索引的场景，比如令牌管理。
  * 红黑树保证了在最坏情况下也能提供对数级别的性能。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 public class RedBlackTree implements Serializable {

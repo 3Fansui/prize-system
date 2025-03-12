@@ -21,7 +21,7 @@ import java.util.Map;
  * 提供活动和奖品的管理接口，包括创建、更新和查询。
  * </p>
  *
- * @author MCP
+ * @author wu
  */
 @RestController
 @RequestMapping("/api/management")

@@ -11,7 +11,7 @@ import java.util.Date;
  * 定义活动的参与规则和限制条件，如用户等级要求、每日最大抽奖次数等。
  * 不同用户等级可以有不同的规则设置。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

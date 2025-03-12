@@ -13,7 +13,7 @@ import java.util.Map;
  * 该类用于封装需要持久化的红黑树数据。
  * 系统会定期将该数据持久化到磁盘中，并在启动时进行加载。
  * 
- * @author MCP
+ * @author wu
  */
 @Data
 public class PersistentData implements Serializable {

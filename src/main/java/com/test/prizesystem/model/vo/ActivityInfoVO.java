@@ -13,7 +13,7 @@ import java.util.List;
  * 包含活动的基本信息以及关联的奖品数量信息。
  * 用于前端显示活动详情和参与状态。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

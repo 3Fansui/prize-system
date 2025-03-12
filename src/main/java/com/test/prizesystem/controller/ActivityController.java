@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * 提供活动信息查询相关的API接口，包括活动基本信息和奖品信息。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Slf4j

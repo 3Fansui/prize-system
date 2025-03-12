@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
  *   <li>缓存管理：内存数据管理与监控</li>
  * </ul>
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})

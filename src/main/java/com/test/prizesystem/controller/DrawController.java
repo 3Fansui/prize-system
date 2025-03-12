@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
  * 该控制器处理所有与抽奖相关的请求，包括用户参与抽奖、获取抽奖结果等功能。
  * 抽奖流程由底层服务实现，包括资格验证、奖品发放策略的执行等。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Slf4j

@@ -10,7 +10,7 @@ import java.util.Date;
  * <p>
  * 用户基本信息以及抽奖和中奖配额，用于压测。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

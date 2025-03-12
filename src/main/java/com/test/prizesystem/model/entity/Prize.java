@@ -11,7 +11,7 @@ import java.util.Date;
  * 该类表示抽奖系统中的奖品信息，包括奖品的个数、价格、库存等信息。
  * 奖品可以关联到不同的活动中，并计算其中奖的概率。
  * 
- * @author MCP生成
+ * @author wu
  * @version 1.0
  */
 @Data

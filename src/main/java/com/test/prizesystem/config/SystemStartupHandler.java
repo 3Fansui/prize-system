@@ -18,7 +18,7 @@ import java.util.List;
  * 主要处理从持久化文件恢复数据后的状态初始化工作。
  * </p>
  *
- * @author MCP
+ * @author wu
  */
 @Slf4j
 @Component
