@@ -1,5 +1,8 @@
 package com.test.prizesystem.util;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.test.prizesystem.util.RedBlackTree.Color.BLACK;
 import static com.test.prizesystem.util.RedBlackTree.Color.RED;
@@ -20,7 +23,9 @@ import static com.test.prizesystem.util.RedBlackTree.Color.RED;
  * @author MCP生成
  * @version 1.0
  */
-public class RedBlackTree {
+public class RedBlackTree implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     enum Color {
         RED, BLACK;
@@ -28,7 +33,8 @@ public class RedBlackTree {
 
     Node root;
 
-    static class Node {
+    static class Node implements Serializable {
+        private static final long serialVersionUID = 1L;
         long key;
         Object value;
         Node left;
@@ -468,6 +474,30 @@ public class RedBlackTree {
             return 0;
         }
         return 1 + countNodes(node.left) + countNodes(node.right);
+    }
+
+    /**
+     * 获取树中所有的键
+     * @return 树中所有键的列表
+     */
+    public List<Long> keySet() {
+        List<Long> keys = new ArrayList<>();
+        collectKeys(root, keys);
+        return keys;
+    }
+
+    /**
+     * 递归收集树中所有的键
+     * @param node 当前节点
+     * @param keys 收集键的列表
+     */
+    private void collectKeys(Node node, List<Long> keys) {
+        if (node == null) {
+            return;
+        }
+        collectKeys(node.left, keys);
+        keys.add(node.key);
+        collectKeys(node.right, keys);
     }
 
 

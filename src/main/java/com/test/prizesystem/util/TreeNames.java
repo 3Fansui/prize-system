@@ -24,20 +24,8 @@ public enum TreeNames {
     /** 用户信息存储 */
     USERS("users"),
     
-    /** 用户抽奖记录存储 */
-    USER_DRAW_RECORDS("user_draw_records"),
-    
     /** 用户中奖记录存储 */
-    USER_PRIZE_RECORDS("user_prize_records"),
-    
-    /** 令牌存储 */
-    TOKENS("tokens"),
-    
-    /** 用户统计数据存储 */
-    USER_STATS("user_stats"),
-    
-    /** 活动中奖记录存储 */
-    ACTIVITY_PRIZE_RECORDS("activity_prize_records");
+    USER_DRAW_RECORDS("user_draw_records");
     
     private final String treeName;
     

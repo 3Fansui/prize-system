@@ -5,11 +5,13 @@ import com.test.prizesystem.model.entity.ActivityPrize;
 import com.test.prizesystem.model.entity.ActivityRule;
 import com.test.prizesystem.model.entity.Prize;
 import com.test.prizesystem.service.ActivityService;
+import com.test.prizesystem.service.UserService;
 import com.test.prizesystem.util.RedBlackTreeStorage;
+import com.test.prizesystem.util.TreeNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
+import com.test.prizesystem.util.PersistenceManager;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -20,28 +22,41 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class DemoDataInitializer implements CommandLineRunner {
+public class DemoDataInitializer {
+    private static final String INITIALIZED_FLAG = "demo_data_initialized";
 
-    @Value("${prize.init-demo-data:true}")
-    private boolean initDemoData;
+    @Value("${prize.init-demo-data:false}")
+    private boolean autoInitDemoData; // 更名为autoInitDemoData，表示是否启动时自动初始化
 
     @Autowired
     private ActivityService activityService;
     
     @Autowired
     private RedBlackTreeStorage treeStorage;
+    
+    @Autowired
+    private PersistenceManager persistenceManager;
+    
+    @Autowired
+    private UserService userService;
 
-    @Override
-    public void run(String... args) {
-        if (!initDemoData) {
-            log.info("演示数据初始化已禁用，跳过初始化");
-            return;
-        }
+    /**
+     * 手动初始化演示数据
+     * 由用户请求触发，而不是自动执行
+     * 
+     * @return 初始化结果描述
+     */
+    public String initializeDemoData() {
+        // 用户手动触发时，不检查initDemoData配置
 
         // 检查活动树是否已有数据
         if (treeStorage.size("activities") > 0) {
-            log.info("已存在演示数据，跳过初始化");
-            return;
+            log.info("已存在演示数据，清空现有数据并重新初始化");
+            // 清空现有数据
+            treeStorage.clear("activities");
+            treeStorage.clear("prizes");
+            treeStorage.clear("activity_prizes");
+            treeStorage.clear("activity_rules");
         }
 
         log.info("开始初始化演示数据");
@@ -60,8 +75,17 @@ public class DemoDataInitializer implements CommandLineRunner {
 
         // 预热活动
         activityService.preheatActivity(activity.getId());
+        
+        // 创建测试用户
+        createDemoUsers();
+        
+        // 标记数据已变更，需要持久化
+        persistenceManager.markDataChanged();
+        // 立即同步到磁盘
+        persistenceManager.forceSyncNow();
 
         log.info("演示数据初始化完成");
+        return "演示数据初始化完成：1个活动，3个奖品，11个用户";
     }
 
     private Activity createDemoActivity() {
@@ -170,6 +194,32 @@ public class DemoDataInitializer implements CommandLineRunner {
         return activityPrizes;
     }
 
+    /**
+     * 创建测试用户
+     */
+    private void createDemoUsers() {
+        // 先检查是否已有用户数据
+        if (treeStorage.size(TreeNames.USERS) > 0) {
+            log.info("已存在用户数据，清除并重新创建");
+            treeStorage.clear(TreeNames.USERS);
+        }
+        
+        // 创建测试用户
+        userService.register(1001, "test1", "test", 100, 10);
+        userService.register(1002, "test2", "test", 100, 10);
+        userService.register(1003, "test3", "test", 100, 10);
+        userService.register(1004, "test4", "test", 100, 10);
+        userService.register(1005, "test5", "test", 100, 10);
+        userService.register(1006, "test6", "test", 100, 10);
+        userService.register(1007, "test7", "test", 100, 10);
+        userService.register(1008, "test8", "test", 100, 10);
+        userService.register(1009, "test9", "test", 100, 10);
+        userService.register(1010, "test10", "test", 100, 10);
+        userService.register(9999, "admin", "admin", 1000, 100);
+        
+        log.info("创建测试用户完成");
+    }
+    
     private void createDemoRule(Activity activity) {
         // 创建活动规则
         ActivityRule rule = new ActivityRule();

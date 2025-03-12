@@ -7,11 +7,15 @@ import com.test.prizesystem.model.entity.Prize;
 import com.test.prizesystem.model.vo.ActivityInfoVO;
 import com.test.prizesystem.service.ActivityService;
 import com.test.prizesystem.service.TokenService;
+import com.test.prizesystem.util.PersistenceManager;
 import com.test.prizesystem.util.RedBlackTreeStorage;
 import com.test.prizesystem.util.TreeNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Calendar;
+import java.util.Date;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +31,9 @@ public class ActivityServiceImpl implements ActivityService {
     @Autowired
     private TokenService tokenService;
     
+    @Autowired
+    private PersistenceManager persistenceManager;
+    
     // 用于缓存活动信息
     private final ConcurrentHashMap<Integer, Activity> activityCache = new ConcurrentHashMap<>();
     
@@ -37,6 +44,7 @@ public class ActivityServiceImpl implements ActivityService {
     private static final String ACTIVITY_TREE = "activities";
     private static final String RULE_TREE = "activity_rules";
     private static final String PRIZE_RELATION_TREE = "activity_prizes";
+    private static final String PRIZE_TREE = "prizes";
     
     @Override
     public Activity getActivity(Integer activityId) {
@@ -143,6 +151,9 @@ public class ActivityServiceImpl implements ActivityService {
         activityCache.put(activity.getId(), activity);
 
         log.info("活动{}预热完成", activityId);
+        
+        // 标记数据变更，需要持久化
+        persistenceManager.markDataChanged();
     }
     
     @Override
@@ -202,5 +213,162 @@ public class ActivityServiceImpl implements ActivityService {
         
         result.setPrizes(prizeInfos);
         return result;
+    }
+    
+    @Override
+    public Integer createActivity(Activity activity) {
+        // 生成ID（实际应用中应该有更好的ID生成策略）
+        if (activity.getId() == null) {
+            activity.setId(generateId());
+        }
+        
+        // 设置创建时间和更新时间
+        Date now = new Date();
+        if (activity.getCreateTime() == null) {
+            activity.setCreateTime(now);
+        }
+        activity.setUpdateTime(now);
+        
+        // 默认状态为未开始
+        if (activity.getStatus() == null) {
+            activity.setStatus(0); // 0=未开始, 1=进行中, 2=已结束
+        }
+        
+        // 保存到红黑树和缓存
+        treeStorage.save(ACTIVITY_TREE, activity.getId(), activity);
+        activityCache.put(activity.getId(), activity);
+        
+        // 标记数据变更
+        persistenceManager.markDataChanged();
+        
+        log.info("创建活动成功: ID={}, 标题={}", activity.getId(), activity.getTitle());
+        return activity.getId();
+    }
+    
+    @Override
+    public boolean updateActivity(Activity activity) {
+        if (activity.getId() == null) {
+            return false;
+        }
+        
+        // 获取现有活动
+        Activity existingActivity = getActivity(activity.getId());
+        if (existingActivity == null) {
+            return false;
+        }
+        
+        // 更新时间
+        activity.setUpdateTime(new Date());
+        activity.setCreateTime(existingActivity.getCreateTime()); // 保持创建时间不变
+        
+        // 更新到红黑树和缓存
+        treeStorage.save(ACTIVITY_TREE, activity.getId(), activity);
+        activityCache.put(activity.getId(), activity);
+        
+        // 标记数据变更
+        persistenceManager.markDataChanged();
+        
+        log.info("更新活动成功: ID={}", activity.getId());
+        return true;
+    }
+    
+    @Override
+    public Integer createPrize(Prize prize) {
+        // 生成ID
+        if (prize.getId() == null) {
+            prize.setId(generateId());
+        }
+        
+        // 设置创建时间和更新时间
+        Date now = new Date();
+        if (prize.getCreateTime() == null) {
+            prize.setCreateTime(now);
+        }
+        prize.setUpdateTime(now);
+        
+        // 默认设置库存
+        if (prize.getRemainingAmount() == null) {
+            prize.setRemainingAmount(prize.getTotalAmount());
+        }
+        
+        // 保存到红黑树
+        treeStorage.save(PRIZE_TREE, prize.getId(), prize);
+        
+        // 标记数据变更
+        persistenceManager.markDataChanged();
+        
+        log.info("创建奖品成功: ID={}, 名称={}", prize.getId(), prize.getName());
+        return prize.getId();
+    }
+    
+    @Override
+    public boolean associateActivityPrize(ActivityPrize activityPrize) {
+        // 检查活动和奖品是否存在
+        Activity activity = getActivity(activityPrize.getActivityId());
+        Prize prize = treeStorage.find(PRIZE_TREE, activityPrize.getPrizeId(), Prize.class);
+        
+        if (activity == null || prize == null) {
+            log.error("关联活动和奖品失败: 活动或奖品不存在");
+            return false;
+        }
+        
+        // 生成关联ID
+        String relationKey = activityPrize.getActivityId() + "_" + activityPrize.getPrizeId();
+        
+        // 保存关联到红黑树
+        treeStorage.save(PRIZE_RELATION_TREE, relationKey.hashCode(), activityPrize);
+        
+        // 标记数据变更
+        persistenceManager.markDataChanged();
+        
+        log.info("关联活动和奖品成功: 活动ID={}, 奖品ID={}, 数量={}",
+                activityPrize.getActivityId(), activityPrize.getPrizeId(), activityPrize.getAmount());
+        return true;
+    }
+    
+    @Override
+    public List<Activity> getAllActivities() {
+        List<Activity> activities = treeStorage.getSampleData(ACTIVITY_TREE, Activity.class, 100);
+        return activities;
+    }
+    
+    @Override
+    public List<Prize> getAllPrizes() {
+        List<Prize> prizes = treeStorage.getSampleData(PRIZE_TREE, Prize.class, 100);
+        return prizes;
+    }
+    
+    @Override
+    public List<Activity> findActivitiesNeedingPreheat() {
+        List<Activity> result = new ArrayList<>();
+        List<Activity> allActivities = getAllActivities();
+        
+        // 获取当前时间
+        Calendar now = Calendar.getInstance();
+        
+        // 获取1分钟后的时间
+        Calendar oneMinuteLater = Calendar.getInstance();
+        oneMinuteLater.add(Calendar.MINUTE, 1);
+        
+        for (Activity activity : allActivities) {
+            // 检查活动是否即将开始且未预热
+            if (activity.getStatus() == 0 && activity.getStartTime() != null) {
+                Calendar startTime = Calendar.getInstance();
+                startTime.setTime(activity.getStartTime());
+                
+                // 如果活动开始时间在当前时间和1分钟后之间，且未预热，则加入列表
+                if (startTime.after(now) && startTime.before(oneMinuteLater)) {
+                    result.add(activity);
+                    log.debug("找到需要预热的活动: ID={}, 开始时间={}", activity.getId(), activity.getStartTime());
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    // 生成ID（简单实现，实际应用中应该使用更可靠的算法）
+    private Integer generateId() {
+        return Math.abs((int) System.currentTimeMillis() % 1000000);
     }
 }

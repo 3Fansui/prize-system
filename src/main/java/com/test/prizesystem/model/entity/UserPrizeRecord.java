@@ -34,4 +34,21 @@ public class UserPrizeRecord {
     
     @ApiModelProperty(value = "中奖时间", example = "2025-01-01 00:00:00", position = 6)
     private Date winTime;
+    
+    /**
+     * 获取中奖时间 (为了兼容JSON反序列化)
+     * @return 中奖时间
+     */
+    public Date getDrawTime() {
+        return winTime;
+    }
+
+    /**
+     * 设置中奖时间 (为了兼容JSON反序列化)
+     * @param drawTime 中奖时间
+     */
+    public void setDrawTime(Date drawTime) {
+        // 可以选择性地将drawTime同步到winTime
+        // this.winTime = drawTime;
+    }
 }

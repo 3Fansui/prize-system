@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.lang.reflect.Method;
 
 /**
  * 基于红黑树的存储引擎，替代MySQL数据库
@@ -32,13 +33,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Slf4j
 @Component
 public class RedBlackTreeStorage {
-    
+
     // 存储不同类型数据的多个红黑树实例
     private final ConcurrentHashMap<String, TreeData> treesMap = new ConcurrentHashMap<>();
-    
+
     // 用于JSON序列化和反序列化
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     /**
      * 内部类，包含红黑树及其读写锁
      */
@@ -46,35 +47,35 @@ public class RedBlackTreeStorage {
         final RedBlackTree tree = new RedBlackTree();
         final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     }
-    
+
     /**
      * 使用枚举获取指定名称的TreeData，如果不存在则创建
      */
     private TreeData getTreeData(TreeNames treeName) {
         return treesMap.computeIfAbsent(treeName.getTreeName(), k -> new TreeData());
     }
-    
+
     /**
      * 使用枚举获取指定名称的红黑树
      */
     public RedBlackTree getTree(TreeNames treeName) {
         return getTreeData(treeName).tree;
     }
-    
+
     /**
      * 使用字符串名称获取TreeData，如果不存在则创建
      */
     private TreeData getTreeData(String treeName) {
         return treesMap.computeIfAbsent(treeName, k -> new TreeData());
     }
-    
+
     /**
      * 获取指定名称的红黑树
      */
     public RedBlackTree getTree(String treeName) {
         return getTreeData(treeName).tree;
     }
-    
+
     /**
      * 保存对象到红黑树中（线程安全）
      * @param treeName 红黑树枚举
@@ -95,7 +96,7 @@ public class RedBlackTreeStorage {
             treeData.lock.writeLock().unlock();
         }
     }
-    
+
     /**
      * 保存对象到红黑树中（线程安全）- 字符串兼容方法
      * @param treeName 红黑树名称
@@ -116,7 +117,7 @@ public class RedBlackTreeStorage {
             treeData.lock.writeLock().unlock();
         }
     }
-    
+
     /**
      * 根据key查找对象（线程安全）
      * @param treeName 红黑树枚举
@@ -132,7 +133,7 @@ public class RedBlackTreeStorage {
             if (value == null) {
                 return null;
             }
-            
+
             return objectMapper.readValue((String) value, clazz);
         } catch (JsonProcessingException e) {
             log.error("对象反序列化失败", e);
@@ -141,7 +142,7 @@ public class RedBlackTreeStorage {
             treeData.lock.readLock().unlock();
         }
     }
-    
+
     /**
      * 根据key查找对象（线程安全）- 字符串兼容方法
      * @param treeName 红黑树名称
@@ -157,7 +158,7 @@ public class RedBlackTreeStorage {
             if (value == null) {
                 return null;
             }
-            
+
             return objectMapper.readValue((String) value, clazz);
         } catch (JsonProcessingException e) {
             log.error("对象反序列化失败", e);
@@ -166,7 +167,7 @@ public class RedBlackTreeStorage {
             treeData.lock.readLock().unlock();
         }
     }
-    
+
     /**
      * 不大于指定key的最大节点（线程安全）
      */
@@ -178,7 +179,7 @@ public class RedBlackTreeStorage {
             if (value == null) {
                 return null;
             }
-            
+
             return objectMapper.readValue((String) value, clazz);
         } catch (JsonProcessingException e) {
             log.error("对象反序列化失败", e);
@@ -187,7 +188,7 @@ public class RedBlackTreeStorage {
             treeData.lock.readLock().unlock();
         }
     }
-    
+
     /**
      * 不大于指定key的最大节点（线程安全）- 字符串兼容方法
      */
@@ -199,7 +200,7 @@ public class RedBlackTreeStorage {
             if (value == null) {
                 return null;
             }
-            
+
             return objectMapper.readValue((String) value, clazz);
         } catch (JsonProcessingException e) {
             log.error("对象反序列化失败", e);
@@ -208,7 +209,7 @@ public class RedBlackTreeStorage {
             treeData.lock.readLock().unlock();
         }
     }
-    
+
     /**
      * 删除对象（线程安全）
      * @param treeName 红黑树枚举
@@ -223,7 +224,7 @@ public class RedBlackTreeStorage {
             treeData.lock.writeLock().unlock();
         }
     }
-    
+
     /**
      * 删除对象（线程安全）- 字符串兼容方法
      * @param treeName 红黑树名称
@@ -238,7 +239,7 @@ public class RedBlackTreeStorage {
             treeData.lock.writeLock().unlock();
         }
     }
-    
+
     /**
      * 获取树中的节点数量（线程安全）
      */
@@ -251,7 +252,7 @@ public class RedBlackTreeStorage {
             treeData.lock.readLock().unlock();
         }
     }
-    
+
     /**
      * 获取树中的节点数量（线程安全）- 字符串兼容方法
      */
@@ -264,28 +265,28 @@ public class RedBlackTreeStorage {
             treeData.lock.readLock().unlock();
         }
     }
-    
+
     /**
      * 清空指定的树（线程安全）
      */
     public void clear(TreeNames treeName) {
         treesMap.remove(treeName.getTreeName());
     }
-    
+
     /**
      * 清空指定的树（线程安全）- 字符串兼容方法
      */
     public void clear(String treeName) {
         treesMap.remove(treeName);
     }
-    
+
     /**
      * 清空所有树
      */
     public void clearAll() {
         treesMap.clear();
     }
-    
+
     /**
      * 获取树中数据的样本（用于调试）
      * @param treeName 树枚举
@@ -296,7 +297,7 @@ public class RedBlackTreeStorage {
     public <T> List<T> getSampleData(TreeNames treeName, Class<T> clazz, int limit) {
         TreeData treeData = getTreeData(treeName);
         List<T> result = new ArrayList<>();
-        
+
         treeData.lock.readLock().lock();
         try {
             // 通过递归获取树中的节点
@@ -304,10 +305,10 @@ public class RedBlackTreeStorage {
         } finally {
             treeData.lock.readLock().unlock();
         }
-        
+
         return result;
     }
-    
+
     /**
      * 获取树中数据的样本（用于调试）- 字符串兼容方法
      * @param treeName 树名称
@@ -318,7 +319,7 @@ public class RedBlackTreeStorage {
     public <T> List<T> getSampleData(String treeName, Class<T> clazz, int limit) {
         TreeData treeData = getTreeData(treeName);
         List<T> result = new ArrayList<>();
-        
+
         treeData.lock.readLock().lock();
         try {
             // 通过递归获取树中的节点
@@ -326,10 +327,10 @@ public class RedBlackTreeStorage {
         } finally {
             treeData.lock.readLock().unlock();
         }
-        
+
         return result;
     }
-    
+
     /**
      * 递归收集红黑树中的节点
      */
@@ -337,10 +338,10 @@ public class RedBlackTreeStorage {
         if (node == null || result.size() >= limit) {
             return;
         }
-        
+
         // 中序遍历：左-根-右
         collectNodes(node.left, result, clazz, limit);
-        
+
         if (result.size() < limit) {
             try {
                 T obj = objectMapper.readValue((String) node.value, clazz);
@@ -349,10 +350,10 @@ public class RedBlackTreeStorage {
                 log.error("解析节点数据失败: {}", e.getMessage());
             }
         }
-        
+
         collectNodes(node.right, result, clazz, limit);
     }
-    
+
     /**
      * 获取用户中奖记录
      * @param userId 用户ID
@@ -360,10 +361,9 @@ public class RedBlackTreeStorage {
      * @return 中奖记录列表
      */
     public <T> List<T> getUserPrizeRecords(Integer userId, Class<T> clazz, int limit) {
-        String treeKey = TreeNames.USER_PRIZE_RECORDS.getTreeName() + ":" + userId;
-        return getSampleData(treeKey, clazz, limit);
+        return getSampleDataByUser(TreeNames.USER_DRAW_RECORDS, userId, clazz, limit);
     }
-    
+
     /**
      * 获取活动中奖记录
      * @param activityId 活动ID
@@ -371,7 +371,100 @@ public class RedBlackTreeStorage {
      * @return 中奖记录列表
      */
     public <T> List<T> getActivityPrizeRecords(Integer activityId, Class<T> clazz, int limit) {
-        String treeKey = TreeNames.ACTIVITY_PRIZE_RECORDS.getTreeName() + ":" + activityId;
-        return getSampleData(treeKey, clazz, limit);
+        return getSampleDataByActivity(TreeNames.USER_DRAW_RECORDS, activityId, clazz, limit);
+    }
+
+    /**
+     * 根据用户ID查询数据
+     * @param treeName 树名称
+     * @param userId 用户ID
+     * @param clazz 返回对象类型
+     * @param limit 限制数量
+     * @return 符合条件的对象列表
+     */
+    private <T> List<T> getSampleDataByUser(TreeNames treeName, Integer userId, Class<T> clazz, int limit) {
+        List<T> result = new ArrayList<>();
+        TreeData treeData = getTreeData(treeName);
+        
+        treeData.lock.readLock().lock();
+        try {
+            RedBlackTree tree = treeData.tree;
+            List<Long> keys = tree.keySet();
+            
+            for (Long key : keys) {
+                try {
+                    Object value = tree.get(key);
+                    if (value == null) {
+                        continue;
+                    }
+                    
+                    T object = objectMapper.readValue((String) value, clazz);
+                    
+                    // 通过反射获取用户ID并比较
+                    Method getUserIdMethod = clazz.getMethod("getUserId");
+                    Integer objectUserId = (Integer) getUserIdMethod.invoke(object);
+                    
+                    if (userId.equals(objectUserId)) {
+                        result.add(object);
+                        if (result.size() >= limit) {
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("获取用户数据时出错：{}", e.getMessage());
+                }
+            }
+        } finally {
+            treeData.lock.readLock().unlock();
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 根据活动ID查询数据
+     * @param treeName 树名称
+     * @param activityId 活动ID
+     * @param clazz 返回对象类型
+     * @param limit 限制数量
+     * @return 符合条件的对象列表
+     */
+    private <T> List<T> getSampleDataByActivity(TreeNames treeName, Integer activityId, Class<T> clazz, int limit) {
+        List<T> result = new ArrayList<>();
+        TreeData treeData = getTreeData(treeName);
+        
+        treeData.lock.readLock().lock();
+        try {
+            RedBlackTree tree = treeData.tree;
+            List<Long> keys = tree.keySet();
+            
+            for (Long key : keys) {
+                try {
+                    Object value = tree.get(key);
+                    if (value == null) {
+                        continue;
+                    }
+                    
+                    T object = objectMapper.readValue((String) value, clazz);
+                    
+                    // 通过反射获取活动ID并比较
+                    Method getActivityIdMethod = clazz.getMethod("getActivityId");
+                    Integer objectActivityId = (Integer) getActivityIdMethod.invoke(object);
+                    
+                    if (activityId.equals(objectActivityId)) {
+                        result.add(object);
+                        if (result.size() >= limit) {
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("获取活动数据时出错：{}", e.getMessage());
+                }
+            }
+        } finally {
+            treeData.lock.readLock().unlock();
+        }
+        
+        return result;
     }
 }

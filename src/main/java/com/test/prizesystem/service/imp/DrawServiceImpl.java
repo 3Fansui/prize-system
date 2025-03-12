@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import com.test.prizesystem.service.UserService;
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.Date;
 
 /**
  * 抽奖服务实现类
@@ -26,7 +27,7 @@ import java.util.TimeZone;
  * 已简化工作流程，移除了统计服务依赖，聚焦于核心抽奖逻辑。
  * 
  * @author MCP生成
- * @version 5.0
+ * @version 6.0
  */
 @Slf4j
 @Service
@@ -64,7 +65,7 @@ public class DrawServiceImpl implements DrawService {
         // 检查用户抽奖次数限制
         try {
             if (!userService.tryDraw(userId)) {
-                return new DrawResponse(false, "抽奖次数已用完");
+                return new DrawResponse(false, "抽奖次数已用尽");
             }
         } catch (IllegalArgumentException e) {
             log.warn("抽奖错误：{}", e.getMessage());
@@ -117,17 +118,17 @@ public class DrawServiceImpl implements DrawService {
             // 异步记录中奖信息
             if (eventQueue != null) {
                 try {
-                    UserDrawEvent event = new UserDrawEvent();
-                    event.setUserId(userId);
-                    event.setActivityId(activityId);
+                    UserDrawEvent winEvent = new UserDrawEvent();
+                    winEvent.setUserId(userId);
+                    winEvent.setActivityId(activityId);
                     // 使用UTC+8时区
-                    Calendar eventCalendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
-                    event.setTimestamp(eventCalendar.getTimeInMillis());
-                    event.setPrizeId(token.getPrizeId());
-                    event.setPrizeName(token.getPrizeName());
+                    Calendar winEventCalendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+                    winEvent.setTimestamp(winEventCalendar.getTimeInMillis());
+                    winEvent.setPrizeId(token.getPrizeId());
+                    winEvent.setPrizeName(token.getPrizeName());
                     
                     // 异步发送到队列
-                    eventQueue.offer(event);
+                    eventQueue.offer(winEvent);
                     log.debug("异步提交中奖事件: 用户ID={}, 奖品={}", userId, token.getPrizeName());
                 } catch (Exception ex) {
                     // 异步处理失败不影响抽奖结果

@@ -6,26 +6,40 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 用户抽奖记录实体类
+ * 用户中奖记录实体类
  * <p>
- * 记录用户的每次抽奖行为，无论是否中奖。
- * 用于统计用户参与活动的次数、频率等信息。
- * 
+ * 记录用户的中奖信息，包含用户ID、活动ID、奖品ID和名称及中奖时间等信息。
+ * 该记录用于后续的奖品发放、统计分析等。
+ *
  * @author MCP生成
- * @version 1.0
+ * @version 2.0
  */
 @Data
-@ApiModel(value = "用户抽奖记录", description = "记录用户参与抽奖的行为")
+@ApiModel(value = "用户中奖记录", description = "记录用户成功中奖的信息")
 public class UserDrawRecord {
     @ApiModelProperty(value = "ID", example = "1000", position = 1)
     private Long id;
-    
+
     @ApiModelProperty(value = "用户ID", example = "10086", position = 2)
     private Integer userId;
-    
+
     @ApiModelProperty(value = "活动ID", example = "1", position = 3)
     private Integer activityId;
     
-    @ApiModelProperty(value = "抽奖时间", example = "2025-01-01 00:00:00", position = 4)
-    private Date drawTime;
+    @ApiModelProperty(value = "奖品ID", example = "2", position = 4)
+    private Integer prizeId;
+
+    @ApiModelProperty(value = "奖品名称", example = "iPhone 14", position = 5)
+    private String prizeName;
+
+    @ApiModelProperty(value = "中奖时间", example = "2025-01-01 00:00:00", position = 6)
+    private Date winTime;
+    
+    /**
+     * 获取中奖时间 (为了兼容CacheController)
+     * @return 中奖时间
+     */
+    public Date getDrawTime() {
+        return winTime;
+    }
 }

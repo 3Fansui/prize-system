@@ -37,24 +37,7 @@ public class UserServiceImpl implements UserService {
     // 用户ID生成器
     private final AtomicInteger idGenerator = new AtomicInteger(10000);
     
-    @PostConstruct
-    public void init() {
-        // 创建固定ID的默认用户用于测试
-        if (treeStorage.size(TreeNames.USERS) == 0) {
-            register(1001, "test1", "test", 100, 10);
-            register(1002, "test2", "test", 100, 10);
-            register(1003, "test3", "test", 100, 10);
-            register(1004, "test4", "test", 100, 10);
-            register(1005, "test5", "test", 100, 10);
-            register(1006, "test6", "test", 100, 10);
-            register(1007, "test7", "test", 100, 10);
-            register(1008, "test8", "test", 100, 10);
-            register(1009, "test9", "test", 100, 10);
-            register(1010, "test10", "test", 100, 10);
-            register(9999, "admin", "admin", 1000, 100);
-            log.info("创建固定ID测试用户完成");
-        }
-    }
+    // 用户初始化已移至DemoDataInitializer中
 
     @Override
     public User register(Integer id, String username, String password, Integer drawQuota, Integer winQuota) {

@@ -2,8 +2,7 @@ package com.test.prizesystem.task;
 
 import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.service.ActivityService;
-import com.test.prizesystem.util.RedBlackTreeStorage;
-import com.test.prizesystem.util.TreeNames;
+import com.test.prizesystem.util.PersistenceManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,7 +30,7 @@ public class ActivityPreheaterTask {
     private ActivityService activityService;
     
     @Autowired
-    private RedBlackTreeStorage treeStorage;
+    private PersistenceManager persistenceManager;
 
     /**
      * 每分钟扫描即将开始的活动并进行预热
@@ -41,23 +40,13 @@ public class ActivityPreheaterTask {
     public void scanAndPreheatActivities() {
         log.info("开始扫描需要预热的活动...");
 
-        // 仅扫描活动ID为1的演示活动（简化版）
-        Activity activity = treeStorage.find(TreeNames.ACTIVITIES, 1, Activity.class);
-        if (activity != null && activity.getStatus() == 0) {
-            // 使用UTC+8时区
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
-            Date now = calendar.getTime();
-            Date startTime = activity.getStartTime();
-            
-            // 如果开始时间在当前时间和未来1分钟之间
-            // 使用同一时区的Calendar计算时间
-            if (startTime.after(now) && startTime.getTime() <= calendar.getTimeInMillis() + 60 * 1000) {
-                try {
-                    log.info("开始预热活动: {}", activity.getTitle());
-                    activityService.preheatActivity(activity.getId());
-                } catch (Exception e) {
-                    log.error("预热活动{}失败", activity.getId(), e);
-                }
+        // 查找需要预热的活动
+        for (Activity activity : activityService.findActivitiesNeedingPreheat()) {
+            try {
+                log.info("开始预热活动: {}", activity.getTitle());
+                activityService.preheatActivity(activity.getId());
+            } catch (Exception e) {
+                log.error("预热活动{}失败", activity.getId(), e);
             }
         }
 
