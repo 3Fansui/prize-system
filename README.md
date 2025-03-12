@@ -25,6 +25,12 @@ mvn clean install -DskipTests
 
 mvn spring-boot:run
 
+### 4.打开swagger
+
+localhost:8080/doc.html
+
+点击系统管理，初始化演示数据后可进行抽奖及压测
+
 ---
 
 ## ⚡ 核心设计策略（秃头程序员の骄傲）
