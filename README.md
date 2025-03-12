@@ -15,19 +15,27 @@
 
 ### 1. 拉取仓库
 
+```
 git clone https://github.com/3Fansui/prize-system.git
+```
 
 ### 2. 构建项目
 
+```
 mvn clean install -DskipTests
+```
 
 ### 3. 启动系统（带预热）
 
+```
 mvn spring-boot:run
+```
 
 ### 4.打开swagger
 
+```
 localhost:8080/doc.html
+```
 
 点击系统管理，初始化演示数据后可进行抽奖及压测
 
