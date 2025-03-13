@@ -2,6 +2,7 @@ package com.test.prizesystem.model.entity;
 
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -12,11 +13,13 @@ import java.util.Date;
  * 奖品可以关联到不同的活动中，并计算其中奖的概率。
  * 
  * @author wu
- * @version 1.0
+ * @version 2.0
  */
 @Data
 @ApiModel(value = "奖品信息", description = "系统中的奖品信息详情")
-public class Prize {
+public class Prize implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private Integer id;
     
     private String name;

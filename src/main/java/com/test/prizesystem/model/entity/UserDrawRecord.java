@@ -3,20 +3,24 @@ package com.test.prizesystem.model.entity;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
  * 用户中奖记录实体类
  * <p>
  * 记录用户的中奖信息，包含用户ID、活动ID、奖品ID和名称及中奖时间等信息。
- * 该记录用于后续的奖品发放、统计分析等。
+ * 该记录用于后续的奖品发放、统计分析等，同时也会被持久化到磁盘。
  *
  * @author wu
- * @version 2.0
+ * @version 3.0
  */
 @Data
 @ApiModel(value = "用户中奖记录", description = "记录用户成功中奖的信息")
-public class UserDrawRecord {
+public class UserDrawRecord implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     @ApiModelProperty(value = "ID", example = "1000", position = 1)
     private Long id;
 
@@ -39,6 +43,7 @@ public class UserDrawRecord {
      * 获取中奖时间 (为了兼容CacheController)
      * @return 中奖时间
      */
+    @JsonIgnore
     public Date getDrawTime() {
         return winTime;
     }

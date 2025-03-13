@@ -34,12 +34,7 @@ public interface TokenService {
      */
     Token getAvailableToken(Integer activityId, long timestamp);
 
-    /**
-     * 将未使用的令牌返回队列
-     * 
-     * @param token 需要返回的令牌
-     */
-    void returnToken(Token token);
+
 
     /**
      * 获取活动的令牌详细信息

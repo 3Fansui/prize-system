@@ -4,7 +4,9 @@ import com.test.prizesystem.model.entity.Activity;
 import com.test.prizesystem.model.entity.ActivityPrize;
 import com.test.prizesystem.model.entity.ActivityRule;
 import com.test.prizesystem.model.entity.Prize;
+import com.test.prizesystem.model.entity.User;
 import com.test.prizesystem.service.ActivityService;
+import com.test.prizesystem.service.DrawService;
 import com.test.prizesystem.service.UserService;
 import com.test.prizesystem.util.RedBlackTreeStorage;
 import com.test.prizesystem.util.TreeNames;
@@ -20,13 +22,18 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 演示数据初始化器
+ * <p>
+ * 负责创建系统演示所需的测试数据，包括活动、奖品、活动奖品关联、活动规则和测试用户。
+ * 可以通过API手动触发初始化，也可以通过配置在系统启动时自动初始化。
+ * 
+ * @author wu
+ * @version 1.1
+ */
 @Slf4j
 @Component
 public class DemoDataInitializer {
-    private static final String INITIALIZED_FLAG = "demo_data_initialized";
-
-    @Value("${prize.init-demo-data:false}")
-    private boolean autoInitDemoData; // 更名为autoInitDemoData，表示是否启动时自动初始化
 
     @Autowired
     private ActivityService activityService;
@@ -39,24 +46,28 @@ public class DemoDataInitializer {
     
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private DrawService drawService;
 
     /**
      * 手动初始化演示数据
-     * 由用户请求触发，而不是自动执行
+     * <p>
+     * 由用户请求触发，创建系统所需的测试数据，包括活动、奖品、活动奖品关联、
+     * 活动规则和测试用户。数据创建后会自动预热。
      * 
      * @return 初始化结果描述
+     * @author wu
      */
     public String initializeDemoData() {
-        // 用户手动触发时，不检查initDemoData配置
-
         // 检查活动树是否已有数据
-        if (treeStorage.size("activities") > 0) {
+        if (treeStorage.size(TreeNames.ACTIVITIES) > 0) {
             log.info("已存在演示数据，清空现有数据并重新初始化");
             // 清空现有数据
-            treeStorage.clear("activities");
-            treeStorage.clear("prizes");
-            treeStorage.clear("activity_prizes");
-            treeStorage.clear("activity_rules");
+            treeStorage.clear(TreeNames.ACTIVITIES);
+            treeStorage.clear(TreeNames.PRIZES);
+            treeStorage.clear(TreeNames.ACTIVITY_PRIZES);
+            treeStorage.clear(TreeNames.ACTIVITY_RULES);
         }
 
         log.info("开始初始化演示数据");
@@ -88,6 +99,14 @@ public class DemoDataInitializer {
         return "演示数据初始化完成：1个活动，3个奖品，11个用户";
     }
 
+    /**
+     * 创建演示活动
+     * <p>
+     * 创建一个固定时间型抽奖活动，从当前时间开始，持续1小时。
+     * 
+     * @return 创建的活动对象
+     * @author wu
+     */
     private Activity createDemoActivity() {
         // 创建固定时间型抽奖活动（类型2）
         Activity activity = new Activity();
@@ -113,13 +132,22 @@ public class DemoDataInitializer {
         activity.setStatus(0);
 
         // 保存活动到红黑树
-        treeStorage.save("activities", activity.getId(), activity);
+        treeStorage.save(TreeNames.ACTIVITIES, activity.getId(), activity);
 
         log.info("创建演示活动: {}, 开始时间: {}", activity.getTitle(), activity.getStartTime());
         
         return activity;
     }
 
+    /**
+     * 创建演示奖品
+     * <p>
+     * 创建三个不同的演示奖品，包括iPhone 14、AirPods和小米手环。
+     * 奖品数量设置较多，便于压力测试。
+     * 
+     * @return 奖品列表
+     * @author wu
+     */
     private List<Prize> createDemoPrizes() {
         List<Prize> prizes = new ArrayList<>();
         
@@ -153,7 +181,7 @@ public class DemoDataInitializer {
 
         // 保存奖品到红黑树
         for (Prize prize : prizes) {
-            treeStorage.save("prizes", prize.getId(), prize);
+            treeStorage.save(TreeNames.PRIZES, prize.getId(), prize);
         }
 
         log.info("创建演示奖品: {}, {}, {}", 
@@ -162,33 +190,39 @@ public class DemoDataInitializer {
         return prizes;
     }
     
+    /**
+     * 创建活动奖品关联
+     * 
+     * @param activity 活动对象
+     * @param prizes 奖品列表
+     * @return 活动奖品关联列表
+     * @author wu
+     */
     private List<ActivityPrize> createActivityPrizes(Activity activity, List<Prize> prizes) {
         List<ActivityPrize> activityPrizes = new ArrayList<>();
         
         ActivityPrize ap1 = new ActivityPrize();
-        ap1.setId(1);
         ap1.setActivityId(activity.getId());
         ap1.setPrizeId(prizes.get(0).getId());
         ap1.setAmount(50);
         activityPrizes.add(ap1);
 
         ActivityPrize ap2 = new ActivityPrize();
-        ap2.setId(2);
         ap2.setActivityId(activity.getId());
         ap2.setPrizeId(prizes.get(1).getId());
         ap2.setAmount(100);
         activityPrizes.add(ap2);
 
         ActivityPrize ap3 = new ActivityPrize();
-        ap3.setId(3);
         ap3.setActivityId(activity.getId());
         ap3.setPrizeId(prizes.get(2).getId());
         ap3.setAmount(200);
         activityPrizes.add(ap3);
 
-        // 保存活动奖品关联到红黑树
+        // 保存活动奖品关联到红黑树，使用activityId_prizeId组合作为键
         for (ActivityPrize ap : activityPrizes) {
-            treeStorage.save("activity_prizes", ap.getId(), ap);
+            String relationKey = ap.getActivityId() + "_" + ap.getPrizeId();
+            treeStorage.save(TreeNames.ACTIVITY_PRIZES, relationKey.hashCode(), ap);
         }
         
         return activityPrizes;
@@ -196,6 +230,11 @@ public class DemoDataInitializer {
 
     /**
      * 创建测试用户
+     * <p>
+     * 创建10个测试用户和1个管理员用户。每个普通用户拥有100次抽奖次数和10次中奖上限，
+     * 管理员有更高的配额。用户创建后会预热到缓存中，提高抽奖效率。
+     *
+     * @author wu
      */
     private void createDemoUsers() {
         // 先检查是否已有用户数据
@@ -218,8 +257,38 @@ public class DemoDataInitializer {
         userService.register(9999, "admin", "admin", 1000, 100);
         
         log.info("创建测试用户完成");
+        
+        // 获取所有用户并预热到缓存
+        try {
+            List<User> allUsers = treeStorage.getSampleData(TreeNames.USERS, User.class, Integer.MAX_VALUE);
+            if (allUsers != null && !allUsers.isEmpty()) {
+                // 预热前过滤检查用户数据
+                List<User> validUsers = new ArrayList<>();
+                for (User user : allUsers) {
+                    if (user != null && user.getId() != null) {
+                        validUsers.add(user);
+                    }
+                }
+                
+                drawService.preloadUserCache(validUsers);
+                log.info("测试用户缓存预热完成，共加载 {} 个用户", validUsers.size());
+            } else {
+                log.warn("未找到用户数据进行预热");
+            }
+        } catch (Exception e) {
+            log.error("预热用户缓存失败", e);
+        }
     }
     
+    /**
+     * 创建活动规则
+     * <p>
+     * 为指定活动创建活动规则，规定用户每日抽奖和中奖次数上限。
+     * 此处设置的次数较多，主要是为了支持压力测试。
+     *
+     * @param activity 要创建规则的活动
+     * @author wu
+     */
     private void createDemoRule(Activity activity) {
         // 创建活动规则
         ActivityRule rule = new ActivityRule();
@@ -230,7 +299,7 @@ public class DemoDataInitializer {
         rule.setMaxWinsDaily(100);  // 增加中奖次数上限
 
         // 保存规则到红黑树
-        treeStorage.save("activity_rules", rule.getId(), rule);
+        treeStorage.save(TreeNames.ACTIVITY_RULES, rule.getId(), rule);
 
         log.info("创建演示活动规则: 每日最多抽奖{}次，最多中奖{}次", 
                 rule.getMaxDrawsDaily(), rule.getMaxWinsDaily());

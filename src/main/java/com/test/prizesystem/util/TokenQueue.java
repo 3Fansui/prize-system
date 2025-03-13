@@ -141,27 +141,7 @@ public class TokenQueue {
         return tokenQueue.pollFirst();
     }
     
-    /**
-     * 将未使用的令牌重新放回对应活动的队列头部
-     * 注意：这里一定使用头插法，保证小时间戳的令牌优先被消费
-     */
-    public void returnToken(Token token) {
-        if (token != null) {
-            Integer activityId = token.getActivityId();
-            ConcurrentLinkedDeque<Token> tokenQueue = activityTokenQueues.get(activityId);
-            
-            if (tokenQueue != null) {
-                // 始终使用头插法返回令牌，确保小时间戳的令牌优先被消费
-                tokenQueue.addFirst(token);
-                if (log.isDebugEnabled()) {
-                    log.debug("令牌已返回队列头部: activityId={}, prizeName={}, timestamp={}", 
-                            activityId, token.getPrizeName(), token.getTokenTimestamp());
-                }
-            } else {
-                log.warn("尝试返回令牌到不存在的活动队列: activityId={}", activityId);
-            }
-        }
-    }
+
     
     /**
      * 清空指定活动的令牌队列

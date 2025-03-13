@@ -19,9 +19,16 @@ import java.time.ZoneId;
 /**
  * 令牌服务实现类
  * <p>
- * 管理令牌的生成、获取和返回等操作。令牌直接包含奖品信息，
- * 简化了抽奖过程中的数据访问。系统为每个活动维护独立的令牌队列，
- * 并使用改进的时间戳生成算法确保奖品分布更加均匀。
+ * 负责管理活动奖品令牌的完整生命周期，包括令牌的生成、存储、获取和消费等操作。
+ * 主要功能点：
+ * <ul>
+ *   <li>令牌生成：根据活动时间范围和奖品列表，生成带有时间戳的奖品令牌</li>
+ *   <li>时间戳策略：采用随机排序+均匀分布算法，确保奖品在活动期间内分布均衡</li>
+ *   <li>令牌获取：根据时间戳获取可用的奖品令牌，确保时序性和公平性</li>
+ *   <li>队列管理：为每个活动维护独立的令牌队列，支持并发处理</li>
+ * </ul>
+ * 令牌直接包含奖品信息，简化了抽奖过程中的数据访问。系统使用红黑树存储令牌相关数据，
+ * 组合使用响应式队列，保证了高并发情况下的性能和一致性。
  * 
  * @author wu
  * @version 5.0
@@ -36,6 +43,25 @@ public class TokenServiceImpl implements TokenService {
     @Autowired
     private RedBlackTreeStorage treeStorage;
 
+    /**
+     * 生成活动奖品令牌
+     * <p>
+     * 根据活动信息和奖品配置，生成活动奖品令牌。整个生成过程分为以下步骤：
+     * <ol>
+     *   <li>清空当前活动的令牌队列，避免重复生成</li>
+     *   <li>获取活动的开始时间和结束时间，计算活动时间范围</li>
+     *   <li>收集所有奖品信息，并为每个奖品生成对应数量的令牌数据</li>
+     *   <li>对所有令牌数据进行随机排序，打乱奖品顺序</li>
+     *   <li>根据活动时间范围和令牌在列表中的位置，计算均匀分布的时间戳</li>
+     *   <li>添加小幅度随机偏移，避免完全均匀导致的计算峰值</li>
+     *   <li>生成最终的令牌，并添加到对应活动的队列中</li>
+     * </ol>
+     * 这种令牌生成策略确保了奖品在活动全过程中的均匀分布，并且避免了可预测性。
+     * 
+     * @param activity 活动信息，包含ID、时间范围等
+     * @param activityPrizes 活动关联的奖品列表
+     * @author wu
+     */
     @Override
     public void generateTokens(Activity activity, List<ActivityPrize> activityPrizes) {
         Integer activityId = activity.getId();
@@ -119,13 +145,38 @@ public class TokenServiceImpl implements TokenService {
     }
     
     /**
-     * 用于临时存储令牌生成数据的内部类
+     * 用于令牌生成过程的数据类
+     * <p>
+     * 该内部类存储令牌生成过程中的临时数据，包括奖品信息和用于排序的随机值。
+     * 顺序先生成随机值，然后根据随机值排序，最后根据排序位置分配时间戳。
+     * 这个过程确保了奖品在时间轴上的随机分布。
+     * 
+     * @author wu
      */
     private static class TokenData {
         Prize prize;
         double randomValue; // 用于排序的随机值
     }
 
+    /**
+     * 获取可用的奖品令牌
+     * <p>
+     * 根据活动ID和当前时间戳，获取当前可用的奖品令牌。
+     * 可用令牌的定义是：令牌的时间戳小于等于当前时间戳的令牌。
+     * 这确保了奖品的发放严格按照预定的时间分布进行。
+     * <p>
+     * 使用时间戳作为筛选条件的好处是：
+     * <ul>
+     *   <li>奖品分布更加均匀，避免短时间内的中奖峰值</li>
+     *   <li>可以控制活动期间奖品发放的节奏</li>
+     *   <li>确保所有参与者对同一个时间点的奖品有相同的机会</li>
+     * </ul>
+     * 
+     * @param activityId 活动ID
+     * @param timestamp 当前时间戳（秒级）
+     * @return 可用的奖品令牌，如果没有则返回null
+     * @author wu
+     */
     @Override
     public Token getAvailableToken(Integer activityId, long timestamp) {
         // 从指定活动的队列中获取可用令牌（时间戳小于等于当前时间的令牌）
@@ -142,11 +193,25 @@ public class TokenServiceImpl implements TokenService {
         return token;
     }
     
-    @Override
-    public void returnToken(Token token) {
-        tokenQueue.returnToken(token);
-    }
 
+
+    /**
+     * 获取令牌详细信息
+     * <p>
+     * 获取指定活动的令牌队列详细信息，主要用于管理界面展示和调试。
+     * 返回的数据包括：
+     * <ul>
+     *   <li>总令牌数量：活动中还未被消费的令牌总数</li>
+     *   <li>活动ID：当前查询的活动标识</li>
+     *   <li>令牌样本：队列中最多20个令牌的详细信息</li>
+     * </ul>
+     * 每个令牌信息包含活动ID、奖品ID、奖品名称、令牌时间戳和格式化的抽奖时间。
+     * 格式化的抽奖时间使用中国时区（UTC+8）进行计算。
+     * 
+     * @param activityId 活动ID
+     * @return 包含令牌队列详细信息的Map
+     * @author wu
+     */
     @Override
     public Map<String, Object> getTokenDetails(Integer activityId) {
         Map<String, Object> result = new HashMap<>();
@@ -193,6 +258,22 @@ public class TokenServiceImpl implements TokenService {
         return result;
     }
     
+    /**
+     * 获取令牌队列大小
+     * <p>
+     * 返回指定活动的令牌队列中剩余的令牌数量。
+     * 这个方法主要用于：
+     * <ul>
+     *   <li>抽奖前判断活动是否还有奖品令牌可用</li>
+     *   <li>统计和监控奖品的剩余数量</li>
+     *   <li>管理界面展示奖品发放进度</li>
+     * </ul>
+     * 令牌队列大小为0表示奖品已全部发放完毕。
+     * 
+     * @param activityId 活动ID
+     * @return 令牌队列中剩余的令牌数量
+     * @author wu
+     */
     @Override
     public int getTokenQueueSize(Integer activityId) {
         // 从指定活动的令牌队列获取大小

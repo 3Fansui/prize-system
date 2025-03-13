@@ -7,7 +7,6 @@ import com.test.prizesystem.model.entity.ActivityRule;
 import com.test.prizesystem.model.entity.Prize;
 import com.test.prizesystem.model.vo.ActivityInfoVO;
 
-import java.util.Date;
 import java.util.List;
 
 public interface ActivityService {

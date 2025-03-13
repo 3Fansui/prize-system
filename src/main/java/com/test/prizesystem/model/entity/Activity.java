@@ -2,6 +2,7 @@ package com.test.prizesystem.model.entity;
 
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -11,11 +12,13 @@ import java.util.Date;
  * 活动是抽奖系统的核心元素，用户及奖品都会关联到特定活动。
  * 
  * @author wu
- * @version 1.0
+ * @version 2.0
  */
 @Data
 @ApiModel(value = "活动信息", description = "抽奖活动的详细信息")
-public class Activity {
+public class Activity implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private Integer id;
     
     private String title;

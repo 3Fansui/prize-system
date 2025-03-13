@@ -1,7 +1,7 @@
 package com.test.prizesystem.controller;
 
 import com.test.prizesystem.model.entity.User;
-import com.test.prizesystem.model.entity.UserPrizeRecord;
+import com.test.prizesystem.model.entity.UserDrawRecord;
 import com.test.prizesystem.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -131,7 +131,7 @@ public class UserController {
             result.put("lastLoginTime", user.getLastLoginTime());
             
             // 获取用户中奖记录
-            List<UserPrizeRecord> records = userService.getUserPrizeRecords(userId, prizeLimit);
+            List<UserDrawRecord> records = userService.getUserPrizeRecords(userId, prizeLimit);
             result.put("prizeRecords", records);
             result.put("prizeCount", records.size());
         } else {

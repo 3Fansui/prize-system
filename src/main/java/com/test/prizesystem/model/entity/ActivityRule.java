@@ -3,6 +3,7 @@ package com.test.prizesystem.model.entity;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -12,11 +13,13 @@ import java.util.Date;
  * 不同用户等级可以有不同的规则设置。
  * 
  * @author wu
- * @version 1.0
+ * @version 2.0
  */
 @Data
 @ApiModel(value = "活动规则", description = "活动的参与规则及限制条件")
-public class ActivityRule {
+public class ActivityRule implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     @ApiModelProperty(value = "ID", example = "1", position = 1)
     private Integer id;
     

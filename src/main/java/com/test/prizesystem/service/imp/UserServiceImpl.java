@@ -1,7 +1,7 @@
 package com.test.prizesystem.service.imp;
 
 import com.test.prizesystem.model.entity.User;
-import com.test.prizesystem.model.entity.UserPrizeRecord;
+import com.test.prizesystem.model.entity.UserDrawRecord;
 import com.test.prizesystem.service.UserService;
 import com.test.prizesystem.util.RedBlackTreeStorage;
 import com.test.prizesystem.util.TreeNames;
@@ -181,7 +181,7 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public List<UserPrizeRecord> getUserPrizeRecords(Integer userId, int limit) {
-        return treeStorage.getUserPrizeRecords(userId, UserPrizeRecord.class, limit);
+    public List<UserDrawRecord> getUserPrizeRecords(Integer userId, int limit) {
+        return treeStorage.getUserPrizeRecords(userId, UserDrawRecord.class, limit);
     }
 }

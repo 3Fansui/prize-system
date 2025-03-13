@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  * 抽奖流程由底层服务实现，包括资格验证、奖品发放策略的执行等。
  * 
  * @author wu
- * @version 1.0
+ * @version 3.0
  */
 @Slf4j
 @RestController

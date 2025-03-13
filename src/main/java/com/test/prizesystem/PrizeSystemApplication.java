@@ -1,15 +1,9 @@
 package com.test.prizesystem;
 
-import com.test.prizesystem.async.EventQueue;
-import com.test.prizesystem.util.RedBlackTreeStorage;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * 抽奖系统应用程序入口类
@@ -38,22 +32,6 @@ public class PrizeSystemApplication {
         SpringApplication.run(PrizeSystemApplication.class, args);
     }
     
-    /**
-     * 事件处理线程池
-     */
-    @Bean
-    public ExecutorService eventConsumerExecutor() {
-        return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-    }
-    
-    /**
-     * 创建事件队列并启动消费者
-     */
-    @Bean
-    public EventQueue eventQueue(RedBlackTreeStorage treeStorage, ExecutorService eventConsumerExecutor) {
-        EventQueue queue = new EventQueue(1000);
-        queue.startConsumers(eventConsumerExecutor, treeStorage);
-        return queue;
-    }
+    // 注意: 事件队列已经通过 @Component 和 @PostConstruct 自动创建和初始化
 
 }

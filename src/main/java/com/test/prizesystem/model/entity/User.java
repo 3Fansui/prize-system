@@ -3,6 +3,7 @@ package com.test.prizesystem.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -11,11 +12,13 @@ import java.util.Date;
  * 用户基本信息以及抽奖和中奖配额，用于压测。
  * 
  * @author wu
- * @version 1.0
+ * @version 2.0
  */
 @Data
 @ApiModel(value = "用户信息", description = "用户基本信息与抽奖配额")
-public class User {
+public class User implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private Integer id;
     
     private String username;

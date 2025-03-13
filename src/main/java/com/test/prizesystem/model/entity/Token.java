@@ -3,6 +3,7 @@ package com.test.prizesystem.model.entity;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import java.io.Serializable;
 
 /**
  * 令牌实体类
@@ -12,11 +13,13 @@ import lombok.Data;
  * 简化版本：移除了不必要的id和创建时间字段。
  * 
  * @author wu
- * @version 4.0
+ * @version 5.0
  */
 @Data
 @ApiModel(value = "令牌信息", description = "控制奖品发放的令牌")
-public class Token {
+public class Token implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     @ApiModelProperty(value = "活动ID", example = "1", position = 1)
     private Integer activityId;
     

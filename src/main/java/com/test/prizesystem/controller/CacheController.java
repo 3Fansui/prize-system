@@ -1,9 +1,8 @@
 package com.test.prizesystem.controller;
 
-import com.test.prizesystem.model.entity.Token;
+
 import com.test.prizesystem.model.entity.User;
 import com.test.prizesystem.model.entity.Prize;
-import com.test.prizesystem.model.entity.UserPrizeRecord;
 import com.test.prizesystem.model.entity.UserDrawRecord;
 import com.test.prizesystem.service.TokenService;
 import com.test.prizesystem.service.UserService;
@@ -56,6 +55,7 @@ public class CacheController {
      * 包括令牌队列大小、持久化初始化状态及各红黑树内容
      */
     @GetMapping("/status")
+    @ApiOperation(value = "查看系统状态")
     public Map<String, Object> getSystemStatus() {
         Map<String, Object> result = new HashMap<>();
         result.put("timestamp", System.currentTimeMillis());
@@ -196,11 +196,12 @@ public class CacheController {
     /**
      * 将用户奖品记录转换为简洁的Map
      */
-    private Map<String, Object> mapUserPrizeRecordInfo(UserPrizeRecord record) {
+    private Map<String, Object> mapUserPrizeRecordInfo(UserDrawRecord record) {
         Map<String, Object> info = new HashMap<>();
         info.put("id", record.getId());
         info.put("userId", record.getUserId());
         info.put("prizeId", record.getPrizeId());
+        info.put("prizeName", record.getPrizeName());
         info.put("winTime", record.getWinTime());
         return info;
     }
@@ -213,7 +214,7 @@ public class CacheController {
         info.put("id", record.getId());
         info.put("userId", record.getUserId());
         info.put("activityId", record.getActivityId());
-        info.put("drawTime", record.getDrawTime());
+        info.put("drawTime", record.getWinTime());
         return info;
     }
 

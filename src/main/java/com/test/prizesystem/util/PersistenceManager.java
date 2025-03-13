@@ -1,5 +1,6 @@
 package com.test.prizesystem.util;
 
+import com.test.prizesystem.model.entity.UserDrawRecord;
 import com.test.prizesystem.model.persistence.PersistentData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -53,7 +55,10 @@ public class PersistenceManager {
         if (syncTimer != null) {
             syncTimer.cancel();
         }
+        // 强制标记有变更并保存，确保所有数据被持久化
+        hasChanges.set(true);
         saveToDisk();
+        log.info("应用关闭前已完成数据持久化");
     }
 
     private void createDataDirectoryIfNeeded() {
@@ -121,6 +126,21 @@ public class PersistenceManager {
                         log.error("恢复树 {} 失败", entry.getKey(), e);
                     }
                 }
+                
+                // 恢复用户中奖记录数据
+                if (data.getUserDrawRecords() != null && !data.getUserDrawRecords().isEmpty()) {
+                    for (UserDrawRecord record : data.getUserDrawRecords()) {
+                        try {
+                            // 保存到USER_DRAW_RECORDS树
+                            treeStorage.save(TreeNames.USER_DRAW_RECORDS, record.getId(), record);
+                            log.debug("恢复用户中奖记录: 用户ID={}, 奖品={}, 记录ID={}",
+                                    record.getUserId(), record.getPrizeName(), record.getId());
+                        } catch (Exception e) {
+                            log.error("恢复用户中奖记录失败: 记录ID={}", record.getId(), e);
+                        }
+                    }
+                    log.info("成功恢复{}条用户中奖记录", data.getUserDrawRecords().size());
+                }
 
                 log.info("成功从{}加载数据，恢复时间: {}", dataFile.getAbsolutePath(), new Date(data.getTimestamp()));
             } catch (Exception e) {
@@ -157,6 +177,22 @@ public class PersistenceManager {
         }
         
         data.setTrees(trees);
+        
+        // 提取用户中奖记录并保存 - 确保中奖记录和奖品名称被持久化
+        try {
+            // 从USER_DRAW_RECORDS树中获取用户中奖记录
+            List<UserDrawRecord> userDrawRecords = treeStorage.getSampleData(
+                TreeNames.USER_DRAW_RECORDS, UserDrawRecord.class, Integer.MAX_VALUE);
+            
+            if (userDrawRecords != null && !userDrawRecords.isEmpty()) {
+                log.info("提取到{}条用户中奖记录进行持久化", userDrawRecords.size());
+                data.setUserDrawRecords(userDrawRecords);
+            } else {
+                log.info("没有用户中奖记录需要持久化");
+            }
+        } catch (Exception e) {
+            log.error("提取用户中奖记录失败", e);
+        }
 
         // 尝试在进行文件操作前释放任何可能的文件锁
         System.gc();
@@ -197,6 +233,11 @@ public class PersistenceManager {
             } else {
                 log.error("无法替换临时文件为正式文件");
             }
+        } catch (java.io.NotSerializableException e) {
+            log.error("序列化失败: 类 {} 未实现Serializable接口", e.getMessage());
+            // 尝试记录更具体的错误信息来帮助调试
+            log.error("序列化失败的对象类型是由PersistentData中的某个字段引起的，"
+                   + "请确保所有实体类均实现了Serializable接口");
         } catch (Exception e) {
             log.error("保存数据到磁盘失败", e);
         }

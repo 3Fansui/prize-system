@@ -1,7 +1,7 @@
 package com.test.prizesystem.service;
 
 import com.test.prizesystem.model.entity.User;
-import com.test.prizesystem.model.entity.UserPrizeRecord;
+import com.test.prizesystem.model.entity.UserDrawRecord;
 
 import java.util.List;
 
@@ -86,5 +86,5 @@ public interface UserService {
      * @param limit 最大返回数量
      * @return 中奖记录列表
      */
-    List<UserPrizeRecord> getUserPrizeRecords(Integer userId, int limit);
+    List<UserDrawRecord> getUserPrizeRecords(Integer userId, int limit);
 }
